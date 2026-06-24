@@ -1,0 +1,66 @@
+{
+  "id": "INC-1001",
+  "scenario": "high_latency",
+  "service": "checkout-api",
+  "environment": "production",
+  "alert": {
+    "source": "prometheus",
+    "severity": "critical",
+    "summary": "checkout-api p99 latency above SLO (1200ms > 500ms) for 10m",
+    "started_at": "2026-06-24T08:12:00Z",
+    "labels": {
+      "service": "checkout-api",
+      "slo": "latency_p99_500ms",
+      "region": "eu-central-1"
+    }
+  },
+  "metrics": [
+    {
+      "name": "http_request_duration_p99_ms",
+      "unit": "ms",
+      "description": "p99 request latency for checkout-api",
+      "points": [
+        { "t": "2026-06-24T08:00:00Z", "value": 240 },
+        { "t": "2026-06-24T08:05:00Z", "value": 410 },
+        { "t": "2026-06-24T08:10:00Z", "value": 980 },
+        { "t": "2026-06-24T08:15:00Z", "value": 1230 }
+      ]
+    },
+    {
+      "name": "db_query_duration_p95_ms",
+      "unit": "ms",
+      "description": "p95 duration of downstream orders-db queries",
+      "points": [
+        { "t": "2026-06-24T08:00:00Z", "value": 35 },
+        { "t": "2026-06-24T08:05:00Z", "value": 180 },
+        { "t": "2026-06-24T08:10:00Z", "value": 760 },
+        { "t": "2026-06-24T08:15:00Z", "value": 990 }
+      ]
+    },
+    {
+      "name": "requests_per_second",
+      "unit": "rps",
+      "description": "Throughput (roughly flat — not a traffic spike)",
+      "points": [
+        { "t": "2026-06-24T08:00:00Z", "value": 420 },
+        { "t": "2026-06-24T08:05:00Z", "value": 430 },
+        { "t": "2026-06-24T08:10:00Z", "value": 415 },
+        { "t": "2026-06-24T08:15:00Z", "value": 425 }
+      ]
+    }
+  ],
+  "logs": [
+    { "t": "2026-06-24T08:10:12Z", "level": "WARN", "service": "checkout-api", "message": "slow query detected: SELECT * FROM orders WHERE user_id=? (no index on user_id)" },
+    { "t": "2026-06-24T08:11:03Z", "level": "WARN", "service": "checkout-api", "message": "downstream orders-db response time 812ms exceeds budget 200ms" },
+    { "t": "2026-06-24T08:13:40Z", "level": "ERROR", "service": "checkout-api", "message": "request timeout waiting on orders-db connection (waited 1000ms)" }
+  ],
+  "expected_root_cause": {
+    "summary": "Slow downstream orders-db queries (missing index on orders.user_id) drive checkout-api p99 latency over SLO; traffic is flat, so this is a dependency/query problem, not load.",
+    "category": "slow_dependency",
+    "key_signals": [
+      "db_query_duration_p95_ms rises in lockstep with request latency",
+      "requests_per_second stays flat (rules out traffic spike)",
+      "log: missing index on orders.user_id"
+    ]
+  }
+}
