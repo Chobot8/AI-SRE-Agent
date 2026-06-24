@@ -13,6 +13,7 @@ dist/
 .venv/
 venv/
 env/
+commits/
 
 # Test / tooling caches
 .pytest_cache/
