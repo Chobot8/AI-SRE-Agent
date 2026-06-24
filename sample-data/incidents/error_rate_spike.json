@@ -1,0 +1,54 @@
+{
+  "id": "INC-1002",
+  "scenario": "error_rate_spike",
+  "service": "payments-api",
+  "environment": "production",
+  "alert": {
+    "source": "alertmanager",
+    "severity": "critical",
+    "summary": "payments-api 5xx error rate 14% (threshold 2%) for 8m",
+    "started_at": "2026-06-24T14:31:00Z",
+    "labels": {
+      "service": "payments-api",
+      "alertname": "HighErrorRate",
+      "deployment": "payments-api-v2.4.0"
+    }
+  },
+  "metrics": [
+    {
+      "name": "http_5xx_ratio",
+      "unit": "ratio",
+      "description": "Fraction of responses that are 5xx",
+      "points": [
+        { "t": "2026-06-24T14:20:00Z", "value": 0.004 },
+        { "t": "2026-06-24T14:25:00Z", "value": 0.006 },
+        { "t": "2026-06-24T14:30:00Z", "value": 0.092 },
+        { "t": "2026-06-24T14:35:00Z", "value": 0.141 }
+      ]
+    },
+    {
+      "name": "deploy_marker",
+      "unit": "bool",
+      "description": "1 at the timestamp a new version was rolled out",
+      "points": [
+        { "t": "2026-06-24T14:20:00Z", "value": 0 },
+        { "t": "2026-06-24T14:28:00Z", "value": 1 },
+        { "t": "2026-06-24T14:35:00Z", "value": 0 }
+      ]
+    }
+  ],
+  "logs": [
+    { "t": "2026-06-24T14:28:11Z", "level": "INFO", "service": "payments-api", "message": "starting payments-api v2.4.0 (previous v2.3.7)" },
+    { "t": "2026-06-24T14:30:22Z", "level": "ERROR", "service": "payments-api", "message": "NullPointerException in ChargeHandler.parseGatewayResponse: gateway 'reference' field missing" },
+    { "t": "2026-06-24T14:31:05Z", "level": "ERROR", "service": "payments-api", "message": "500 Internal Server Error: unhandled exception processing /charge" }
+  ],
+  "expected_root_cause": {
+    "summary": "A regression in deploy v2.4.0 (unhandled missing 'reference' field in gateway response) causes a 5xx spike beginning right after rollout. Rolling back to v2.3.7 should restore the error rate.",
+    "category": "bad_release",
+    "key_signals": [
+      "5xx ratio jumps immediately after deploy_marker at 14:28",
+      "NullPointerException tied to new ChargeHandler code",
+      "error onset aligns with version change v2.3.7 -> v2.4.0"
+    ]
+  }
+}
