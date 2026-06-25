@@ -25,6 +25,10 @@ htmlcov/
 # Generated incident data (telemetry ingestion output, KAN-3)
 data/
 
+# Local OpenCode configuration
+.opencode/
+opencode.jsonc
+
 # IDE / OS
 .vscode/
 .idea/

@@ -4,6 +4,12 @@
   // Default model for the project
   "model": "anthropic/claude-sonnet-4-5",
 
+  "instructions": ["CLAUDE.md"],
+
+  "skills": {
+    "paths": [".opencode/skills"]
+  },
+
   "autoupdate": true,
 
   "server": {
