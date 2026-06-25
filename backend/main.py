@@ -9,7 +9,7 @@ Interactive docs are then available at http://localhost:8000/docs
 from fastapi import FastAPI
 
 from backend import __version__
-from backend.api.routes import health
+from backend.api.routes import diagnosis, health
 from backend.config import get_settings
 
 settings = get_settings()
@@ -24,6 +24,7 @@ app = FastAPI(
 )
 
 app.include_router(health.router)
+app.include_router(diagnosis.router)
 
 
 @app.get("/", tags=["meta"])
