@@ -1,0 +1,13 @@
+[project]
+name = "ai-sre-agent"
+version = "0.1.0"
+description = "An AI Site Reliability Engineering agent for incident detection, diagnosis, and remediation guidance."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
