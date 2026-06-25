@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Chobot8/AI-SRE-Agent/sample-data/schema/incident.schema.json",
+  "title": "NormalizedIncident",
+  "description": "Normalized incident context consumed by the AI SRE Agent.",
+  "type": "object",
+  "required": ["id", "scenario", "service", "environment", "alert", "metrics", "logs"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "description": "Stable incident identifier." },
+    "scenario": {
+      "type": "string",
+      "enum": [
+        "high_latency",
+        "error_rate_spike",
+        "pod_crash_loop",
+        "queue_backlog",
+        "db_saturation"
+      ]
+    },
+    "service": { "type": "string" },
+    "environment": { "type": "string", "enum": ["local", "staging", "production"] },
+    "alert": {
+      "type": "object",
+      "required": ["source", "severity", "summary", "started_at"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "description": "e.g. prometheus, grafana, alertmanager" },
+        "severity": { "type": "string", "enum": ["info", "warning", "critical"] },
+        "summary": { "type": "string" },
+        "started_at": { "type": "string", "format": "date-time" },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "unit", "points"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "unit": { "type": "string" },
+          "description": { "type": "string" },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "string", "format": "date-time" },
+                "value": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "logs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["t", "level", "service", "message"],
+        "additionalProperties": false,
+        "properties": {
+          "t": { "type": "string", "format": "date-time" },
+          "level": { "type": "string", "enum": ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"] },
+          "service": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "expected_root_cause": {
+      "type": "object",
+      "description": "Ground truth for evaluation (KAN-9).",
+      "required": ["summary"],
+      "additionalProperties": false,
+      "properties": {
+        "summary": { "type": "string" },
+        "category": { "type": "string" },
+        "key_signals": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
