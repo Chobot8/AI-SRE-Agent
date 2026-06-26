@@ -57,6 +57,9 @@
       "connections climb to the pool max (100) as lock waits spike",
       "log: long-running transaction holding lock on orders",
       "downstream 'pool exhausted' errors in checkout-api"
+    ],
+    "runbook_references": [
+      "db_saturation.md"
     ]
   }
 }

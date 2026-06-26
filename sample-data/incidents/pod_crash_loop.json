@@ -49,6 +49,9 @@
       "memory usage hits the 512Mi limit immediately before each restart",
       "log: OOMKilled",
       "restart count climbs in a tight loop (CrashLoopBackOff)"
+    ],
+    "runbook_references": [
+      "pod_crash_loop.md"
     ]
   }
 }

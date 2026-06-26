@@ -61,6 +61,9 @@
       "db_query_duration_p95_ms rises in lockstep with request latency",
       "requests_per_second stays flat (rules out traffic spike)",
       "log: missing index on orders.user_id"
+    ],
+    "runbook_references": [
+      "high_latency.md"
     ]
   }
 }

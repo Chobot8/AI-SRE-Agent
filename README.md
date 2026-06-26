@@ -79,6 +79,19 @@ A successful health response looks like:
 pytest
 ```
 
+## Evaluate
+
+KAN-9 adds a deterministic local evaluation baseline in
+`sample-data/evaluation/baseline.json`. It covers the five bundled synthetic
+incident scenarios and checks expected root cause, relevant evidence, runbook
+retrieval quality, and diagnosis completeness.
+
+Run the evaluation checks with:
+
+```bash
+pytest tests/test_evaluation.py
+```
+
 ## Configuration
 
 All configuration is read from environment variables (loaded from `.env` in

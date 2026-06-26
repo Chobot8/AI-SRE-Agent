@@ -49,6 +49,9 @@
       "5xx ratio jumps immediately after deploy_marker at 14:28",
       "NullPointerException tied to new ChargeHandler code",
       "error onset aligns with version change v2.3.7 -> v2.4.0"
+    ],
+    "runbook_references": [
+      "error_rate_spike.md"
     ]
   }
 }
