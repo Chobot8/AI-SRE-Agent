@@ -73,6 +73,45 @@ A successful health response looks like:
 }
 ```
 
+## Run with Docker (containerized demo stack)
+
+The whole demo (API + UI) runs in containers via docker-compose (KAN-10). This is
+the easiest way to demo the project on another machine — only Docker is required.
+
+Prerequisites: Docker Engine with Compose v2 (`docker compose version` ≥ 2.24).
+
+```bash
+# From the repo root — build and start the stack
+docker compose -f infra/docker-compose.yml up --build
+```
+
+This starts two services:
+
+- **api** — FastAPI backend at http://localhost:8000 (`/health`, `/docs`)
+- **ui** — Streamlit incident-triage UI at http://localhost:8501
+
+The UI waits for the API to report healthy before starting. Both containers expose
+Docker health checks (the API probes `/health`; the UI probes Streamlit's
+`/_stcore/health`), so `docker compose ps` shows each service as `healthy`.
+
+Configuration is read from the environment. Defaults work out of the box; to
+supply local values or LLM keys, copy `.env.example` to `.env` first (it is
+gitignored and loaded automatically — no secrets are committed):
+
+```bash
+cp .env.example .env        # Windows: copy .env.example .env
+```
+
+Stop the stack with `Ctrl+C`, then clean up with:
+
+```bash
+docker compose -f infra/docker-compose.yml down
+```
+
+A separate vector-database container is intentionally **not** included: the RAG
+index is built in-process from `knowledge/runbooks/`, and the "mock observability
+data" is the bundled `sample-data/incidents/` replayed through the API.
+
 ## Test
 
 ```bash
