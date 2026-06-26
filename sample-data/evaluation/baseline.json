@@ -1,0 +1,33 @@
+{
+  "version": "KAN-9-baseline-1",
+  "description": "Deterministic baseline expectations for local evaluation before prompt or retrieval tuning.",
+  "minimum_scenarios": 5,
+  "minimum_top_hypothesis_confidence": 0.65,
+  "scenarios": {
+    "high_latency": {
+      "expected_category": "slow_dependency",
+      "expected_top_cause_contains": "downstream dependency",
+      "expected_runbook": "high_latency.md"
+    },
+    "error_rate_spike": {
+      "expected_category": "bad_release",
+      "expected_top_cause_contains": "release",
+      "expected_runbook": "error_rate_spike.md"
+    },
+    "pod_crash_loop": {
+      "expected_category": "oom_kill",
+      "expected_top_cause_contains": "oomkilled",
+      "expected_runbook": "pod_crash_loop.md"
+    },
+    "queue_backlog": {
+      "expected_category": "stuck_consumer",
+      "expected_top_cause_contains": "stuck consumer",
+      "expected_runbook": "queue_backlog.md"
+    },
+    "db_saturation": {
+      "expected_category": "lock_contention",
+      "expected_top_cause_contains": "lock contention",
+      "expected_runbook": "db_saturation.md"
+    }
+  }
+}

@@ -59,6 +59,9 @@
       "consume rate collapses while produce rate is steady",
       "log: SMTP upstream timeout / workers blocked",
       "lag rises monotonically"
+    ],
+    "runbook_references": [
+      "queue_backlog.md"
     ]
   }
 }

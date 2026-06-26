@@ -79,7 +79,8 @@
       "properties": {
         "summary": { "type": "string" },
         "category": { "type": "string" },
-        "key_signals": { "type": "array", "items": { "type": "string" } }
+        "key_signals": { "type": "array", "items": { "type": "string" } },
+        "runbook_references": { "type": "array", "items": { "type": "string" } }
       }
     }
   }

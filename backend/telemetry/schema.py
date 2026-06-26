@@ -81,6 +81,7 @@ class ExpectedRootCause(BaseModel):
     summary: str
     category: str | None = None
     key_signals: list[str] = Field(default_factory=list)
+    runbook_references: list[str] = Field(default_factory=list)
 
 
 class NormalizedIncident(BaseModel):
