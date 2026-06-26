@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 import httpx
 import streamlit as st
 
 
-DEFAULT_API_BASE_URL = "http://localhost:8000"
+# Externalized configuration: the backend URL is read from the environment, so the
+# same image runs locally (localhost) and in docker-compose (the `api` service).
+DEFAULT_API_BASE_URL = os.environ.get("BACKEND_API_URL", "http://localhost:8000")
 REQUEST_TIMEOUT_SECONDS = 10.0
 
 

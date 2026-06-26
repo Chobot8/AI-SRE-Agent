@@ -1,0 +1,79 @@
+# Local demo stack for the AI SRE Agent (KAN-10).
+#
+# Usage (from the repo root):
+#   docker compose -f infra/docker-compose.yml up --build
+#
+# Services:
+#   api  - FastAPI backend (health + incident diagnosis endpoints)
+#   ui   - Streamlit incident-triage demo that calls the api over HTTP
+#
+# Notes on scope:
+#   * Vector database  - the RAG store is an in-process, JSON-backed index built
+#     from knowledge/runbooks at runtime, so no separate DB container is needed.
+#   * Mock observability data - the bundled sample-data/incidents/*.json files
+#     are baked into the api image and replayed via the /scenarios API.
+#
+# Configuration is externalized through environment variables. Real secrets are
+# never committed: copy .env.example to .env (gitignored) to supply local values.
+
+name: ai-sre-agent
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.backend
+    image: ai-sre-agent-api:local
+    container_name: ai-sre-agent-api
+    # Optional local overrides / secrets. Missing .env is fine (sane defaults).
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      APP_NAME: ${APP_NAME:-AI SRE Agent}
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      HOST: 0.0.0.0
+      PORT: 8000
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status==200 else sys.exit(1)
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.ui
+    image: ai-sre-agent-ui:local
+    container_name: ai-sre-agent-ui
+    environment:
+      # The UI talks to the api service over the compose network.
+      BACKEND_API_URL: http://api:8000
+      STREAMLIT_SERVER_PORT: "8501"
+      STREAMLIT_SERVER_ADDRESS: 0.0.0.0
+      STREAMLIT_SERVER_HEADLESS: "true"
+      STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
+    ports:
+      - "8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=3).status==200 else sys.exit(1)
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped

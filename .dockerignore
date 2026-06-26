@@ -1,0 +1,39 @@
+# Keep build context small and free of local/secret artifacts.
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Python virtualenvs / caches
+.venv
+venv
+env
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Generated telemetry / RAG data (rebuilt at runtime)
+data/
+
+# Secrets / local env (never bake into images)
+.env
+*.env
+!.env.example
+
+# Local tooling / IDE / OS
+.opencode/
+opencode.jsonc
+commits/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Not needed inside runtime images
+tests/
