@@ -3,6 +3,9 @@
 Framework-agnostic orchestration behind the API: submit/replay an incident, run
 the analysis (KAN-5) + remediation (KAN-6), store the result, and fetch it by id.
 Kept free of FastAPI so it can be unit-tested without the web stack.
+
+Instrumented for observability (KAN-12): every diagnosis runs inside a
+correlation context, logs its major workflow steps, and records a metric.
 """
 
 from __future__ import annotations
@@ -12,7 +15,16 @@ import uuid
 from pathlib import Path
 
 from backend.analysis import diagnose_incident
+from backend.observability import (
+    METRICS,
+    correlation_context,
+    get_correlation_id,
+    get_logger,
+    log_event,
+)
 from backend.remediation import recommend_for
+
+_log = get_logger("service")
 
 
 def _sample_dir() -> Path:
@@ -26,22 +38,47 @@ class DiagnosisService:
         self._store: dict[str, dict] = {}
 
     def submit(self, incident: dict) -> dict:
-        """Diagnose + recommend for an incident; store and return a receipt."""
-        diagnosis = diagnose_incident(incident)
-        plan = recommend_for(diagnosis)
+        """Diagnose + recommend for an incident; store and return a receipt.
 
-        diagnosis_id = uuid.uuid4().hex
-        result = {
-            "diagnosis_id": diagnosis_id,
-            **diagnosis.to_dict(),
-            "remediation": plan.to_dict(),
-        }
-        self._store[diagnosis_id] = result
-        return {
-            "diagnosis_id": diagnosis_id,
-            "incident_id": diagnosis.incident_id,
-            "status": diagnosis.status,
-        }
+        Runs under a correlation ID (reusing the request's if one is bound) that
+        is attached to the stored result and every log line for the diagnosis.
+        """
+        with correlation_context(get_correlation_id()) as correlation_id:
+            scenario = "unknown"
+            incident_id = "unknown"
+            if isinstance(incident, dict):
+                scenario = str(incident.get("scenario", "unknown"))
+                incident_id = str(incident.get("id", "unknown"))
+            log_event(_log, "diagnosis.received", scenario=scenario, incident_id=incident_id)
+
+            diagnosis = diagnose_incident(incident)
+            plan = recommend_for(diagnosis)
+
+            diagnosis_id = uuid.uuid4().hex
+            result = {
+                "diagnosis_id": diagnosis_id,
+                "correlation_id": correlation_id,
+                **diagnosis.to_dict(),
+                "remediation": plan.to_dict(),
+            }
+            self._store[diagnosis_id] = result
+
+            engine = diagnosis.engine or "none"
+            METRICS.diagnoses_total.inc(status=diagnosis.status, engine=engine)
+            log_event(
+                _log,
+                "diagnosis.completed",
+                diagnosis_id=diagnosis_id,
+                status=diagnosis.status,
+                engine=engine,
+                hypotheses=len(diagnosis.hypotheses),
+            )
+            return {
+                "diagnosis_id": diagnosis_id,
+                "correlation_id": correlation_id,
+                "incident_id": diagnosis.incident_id,
+                "status": diagnosis.status,
+            }
 
     def get(self, diagnosis_id: str) -> dict | None:
         """Return the full stored diagnosis result, or None."""

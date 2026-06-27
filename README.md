@@ -139,6 +139,53 @@ All configuration is read from environment variables (loaded from `.env` in
 development) via `backend/config.py`. See `.env.example` for the full list.
 **Never commit real secrets** — `.env` is gitignored; only `.env.example` is tracked.
 
+## Observability
+
+Because this is an SRE-focused agent, the agent itself is observable (KAN-12):
+structured logs, metrics, and a correlation ID per diagnosis. The
+`backend/observability/` package is dependency-free (stdlib only).
+
+**Correlation IDs (tracing).** Every incident diagnosis runs under a correlation
+ID that appears in the API receipt (`correlation_id`), the stored result, and
+every log line for that diagnosis. Requests echo it back in the
+`X-Correlation-ID` response header, and an inbound `X-Correlation-ID` header is
+honoured so a trace can span the UI and the API.
+
+**Structured logs.** Logs are emitted as one JSON object per line to stdout,
+tagged with the correlation ID. Major workflow steps are logged —
+`diagnosis.received`, `retrieval.completed`, `llm.accepted` / `llm.fallback`,
+`diagnosis.completed`, and `request.handled`. Secrets are redacted by field name
+(anything containing `key`, `token`, `secret`, `password`, …), so API keys never
+reach the logs. Set `LOG_FORMAT=text` for human-readable lines during a demo, or
+keep `json` (default) for machine parsing. `LOG_LEVEL` controls verbosity.
+
+**Metrics.** Prometheus-format metrics are exposed at `GET /metrics`:
+
+| Metric | Type | Meaning |
+| ------ | ---- | ------- |
+| `agent_requests_total` | counter | HTTP requests by endpoint/method/status |
+| `agent_request_failures_total` | counter | requests that returned 5xx |
+| `agent_request_latency_seconds` | summary | request latency (count + sum) |
+| `agent_diagnoses_total` | counter | diagnoses by status/engine |
+| `agent_retrievals_total` | counter | runbook retrieval operations |
+| `agent_retrieved_chunks_total` | counter | runbook chunks returned |
+| `agent_llm_calls_total` | counter | optional LLM client calls |
+| `agent_llm_tokens_total` | counter | LLM tokens used (when the client reports usage) |
+
+**Inspecting behaviour during the demo:**
+
+```bash
+# 1. Run a diagnosis and note the correlation_id in the response
+curl -s -X POST http://localhost:8000/incidents/replay/high_latency
+
+# 2. Scrape the metrics
+curl -s http://localhost:8000/metrics
+
+# 3. Watch the structured logs (containerized stack)
+docker compose -f infra/docker-compose.yml logs -f api
+# ...or set LOG_FORMAT=text before `uvicorn backend.main:app` for readable logs
+```
+
 ## Continuous integration
 
 Every pull request and every push to `main` runs the CI pipeline

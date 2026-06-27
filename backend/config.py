@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     environment: str = "local"
     debug: bool = True
 
+    # --- Observability (KAN-12) ---
+    log_level: str = "INFO"
+    log_format: str = "json"  # "json" (structured) or "text"
+
     # --- Server ---
     host: str = "0.0.0.0"
     port: int = 8000
