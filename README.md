@@ -1,5 +1,7 @@
 # AI SRE Agent
 
+[![CI](https://github.com/Chobot8/AI-SRE-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Chobot8/AI-SRE-Agent/actions/workflows/ci.yml)
+
 An AI Site Reliability Engineering agent that detects, explains, and recommends
 actions for common service incidents (high latency, error-rate spikes, pod crash
 loops, queue backlogs, database saturation).
@@ -136,6 +138,46 @@ pytest tests/test_evaluation.py
 All configuration is read from environment variables (loaded from `.env` in
 development) via `backend/config.py`. See `.env.example` for the full list.
 **Never commit real secrets** — `.env` is gitignored; only `.env.example` is tracked.
+
+## Continuous integration
+
+Every pull request and every push to `main` runs the CI pipeline
+(`.github/workflows/ci.yml`, KAN-11). The build status is shown by the badge at
+the top of this README. CI is required to be green before merging.
+
+The pipeline has two stages:
+
+1. **Format, lint, tests & schema checks** — `ruff format --check` (advisory,
+   reported but non-blocking), `ruff check`, then `pytest` (the unit suite plus
+   `tests/test_schema.py`, which validates the sample incidents against
+   `sample-data/schema/incident.schema.json`). A lint or test failure fails the
+   pipeline.
+2. **Build container images** — builds both `infra/Dockerfile.backend` and
+   `infra/Dockerfile.ui`, then starts the backend image and probes `/health` to
+   confirm the container actually runs.
+
+## Contributing
+
+Local development workflow:
+
+```bash
+# 1. Set up and install (including dev tools: ruff, pytest, jsonschema)
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# 2. Create a feature branch (named after the ticket where applicable)
+git checkout -b KAN-XX-short-description
+
+# 3. Before opening a PR, run the same checks CI runs:
+ruff format .          # auto-format
+ruff check --fix .     # lint and auto-fix what it can
+pytest                 # unit tests + schema checks
+
+# 4. (Optional) verify the containers build and run
+docker compose -f infra/docker-compose.yml up --build
+```
+
+Open a pull request against `main`; CI must pass before the change can be merged.
 
 ## Roadmap
 

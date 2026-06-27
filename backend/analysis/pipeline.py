@@ -82,7 +82,10 @@ class IncidentAnalyzer:
                 Hypothesis(
                     cause=tpl.cause,
                     confidence=tpl.base_confidence,
-                    evidence=symptoms_from_signals(signals, evidence) or ["No dominant signal detected"],
+                    evidence=(
+                        symptoms_from_signals(signals, evidence)
+                        or ["No dominant signal detected"]
+                    ),
                     recommended_checks=list(tpl.recommended_checks),
                     missing_information=list(tpl.missing_information),
                 )

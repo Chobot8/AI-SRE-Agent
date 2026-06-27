@@ -1,6 +1,5 @@
 """Tests for the telemetry ingestion layer (KAN-3)."""
 
-import tempfile
 from pathlib import Path
 
 import pytest

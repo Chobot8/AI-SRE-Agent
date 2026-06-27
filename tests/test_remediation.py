@@ -7,7 +7,6 @@ import pytest
 from backend.remediation import (
     ActionCategory,
     AutoExecutionForbidden,
-    RemediationAdvisor,
     execute,
     recommend_for,
 )

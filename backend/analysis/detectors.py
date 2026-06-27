@@ -103,8 +103,14 @@ _LOG_KEYWORDS: list[tuple[tuple[str, ...], str]] = [
     (("oomkilled", "out of memory", "exceeded memory limit"), "log_oom"),
     (("slow query", "missing index", "no index"), "log_slow_query"),
     (("timeout", "timed out"), "log_timeout"),
-    (("pool exhausted", "could not get db connection", "connection from pool"), "log_pool_exhausted"),
-    (("nullpointerexception", "unhandled exception", "internal server error", "traceback"), "log_exception"),
+    (
+        ("pool exhausted", "could not get db connection", "connection from pool"),
+        "log_pool_exhausted",
+    ),
+    (
+        ("nullpointerexception", "unhandled exception", "internal server error", "traceback"),
+        "log_exception",
+    ),
     (("long-running transaction", "holding lock", "lock wait"), "log_lock"),
     (("crashloopbackoff", "back-off restarting"), "log_crashloop"),
     (("workers waiting", "worker pool blocked", "all 8 workers"), "log_workers_blocked"),

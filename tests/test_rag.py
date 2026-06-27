@@ -9,7 +9,6 @@ from backend.rag import (
     VectorStore,
     build_index,
     format_grounded_answer,
-    query_from_incident,
 )
 from backend.rag.chunking import chunk_markdown
 

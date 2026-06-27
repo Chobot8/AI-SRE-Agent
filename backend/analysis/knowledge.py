@@ -27,7 +27,12 @@ CAUSE_TEMPLATES: dict[str, list[CauseTemplate]] = {
     "high_latency": [
         CauseTemplate(
             cause="Slow downstream dependency / unindexed query",
-            signals=["dependency_latency_rising", "latency_rising", "throughput_flat", "log_slow_query"],
+            signals=[
+                "dependency_latency_rising",
+                "latency_rising",
+                "throughput_flat",
+                "log_slow_query",
+            ],
             base_confidence=0.9,
             recommended_checks=[
                 "Inspect slow-query logs for the affected datastore",
@@ -40,14 +45,20 @@ CAUSE_TEMPLATES: dict[str, list[CauseTemplate]] = {
             cause="Connection/thread-pool contention",
             signals=["log_timeout", "latency_rising"],
             base_confidence=0.55,
-            recommended_checks=["Inspect connection-pool wait/acquire time", "Check pool size vs concurrency"],
+            recommended_checks=[
+                "Inspect connection-pool wait/acquire time",
+                "Check pool size vs concurrency",
+            ],
             missing_information=["Pool utilization metrics"],
         ),
         CauseTemplate(
             cause="Traffic-driven load",
             signals=["throughput_rising", "latency_rising"],
             base_confidence=0.5,
-            recommended_checks=["Correlate latency with request volume", "Check autoscaling status"],
+            recommended_checks=[
+                "Correlate latency with request volume",
+                "Check autoscaling status",
+            ],
             missing_information=["Capacity headroom"],
         ),
     ],
@@ -67,7 +78,10 @@ CAUSE_TEMPLATES: dict[str, list[CauseTemplate]] = {
             cause="Downstream dependency failure",
             signals=["errors_rising", "log_timeout"],
             base_confidence=0.55,
-            recommended_checks=["Check health of downstream services", "Inspect dependency error rates"],
+            recommended_checks=[
+                "Check health of downstream services",
+                "Inspect dependency error rates",
+            ],
             missing_information=["Downstream status"],
         ),
     ],
@@ -87,21 +101,33 @@ CAUSE_TEMPLATES: dict[str, list[CauseTemplate]] = {
             cause="Failing readiness/liveness probe",
             signals=["restarts_rising", "log_crashloop"],
             base_confidence=0.5,
-            recommended_checks=["Review probe thresholds vs startup time", "Check probe endpoint health"],
+            recommended_checks=[
+                "Review probe thresholds vs startup time",
+                "Check probe endpoint health",
+            ],
             missing_information=["Probe configuration"],
         ),
         CauseTemplate(
             cause="Startup config/migration failure",
             signals=["restarts_rising", "log_exception"],
             base_confidence=0.45,
-            recommended_checks=["Inspect startup logs before the crash", "Verify config/secrets and migrations"],
+            recommended_checks=[
+                "Inspect startup logs before the crash",
+                "Verify config/secrets and migrations",
+            ],
             missing_information=["Recent config changes"],
         ),
     ],
     "queue_backlog": [
         CauseTemplate(
             cause="Stuck consumer on unresponsive downstream",
-            signals=["consume_collapsed", "produce_steady", "lag_rising", "log_timeout", "log_workers_blocked"],
+            signals=[
+                "consume_collapsed",
+                "produce_steady",
+                "lag_rising",
+                "log_timeout",
+                "log_workers_blocked",
+            ],
             base_confidence=0.9,
             recommended_checks=[
                 "Check health of the blocking downstream dependency",
@@ -114,14 +140,20 @@ CAUSE_TEMPLATES: dict[str, list[CauseTemplate]] = {
             cause="Under-provisioned consumers",
             signals=["lag_rising", "consume_collapsed"],
             base_confidence=0.45,
-            recommended_checks=["Compare sustained consume vs produce rate", "Check consumer CPU/replicas"],
+            recommended_checks=[
+                "Compare sustained consume vs produce rate",
+                "Check consumer CPU/replicas",
+            ],
             missing_information=["Consumer resource headroom"],
         ),
         CauseTemplate(
             cause="Poison message causing retries",
             signals=["lag_rising", "log_exception"],
             base_confidence=0.4,
-            recommended_checks=["Look for a single message retried repeatedly", "Inspect the dead-letter queue"],
+            recommended_checks=[
+                "Look for a single message retried repeatedly",
+                "Inspect the dead-letter queue",
+            ],
             missing_information=["Offending message payload"],
         ),
     ],
@@ -131,7 +163,8 @@ CAUSE_TEMPLATES: dict[str, list[CauseTemplate]] = {
             signals=["lockwaits_rising", "log_lock", "connections_high"],
             base_confidence=0.9,
             recommended_checks=[
-                "List active transactions and the locks they hold (pg_stat_activity / SHOW PROCESSLIST)",
+                "List active transactions and the locks they hold "
+                "(pg_stat_activity / SHOW PROCESSLIST)",
                 "Terminate or commit the blocking transaction to release locks",
                 "Add statement/lock timeouts to prevent indefinite holds",
             ],
@@ -141,14 +174,20 @@ CAUSE_TEMPLATES: dict[str, list[CauseTemplate]] = {
             cause="Connection-pool exhaustion from slow queries",
             signals=["connections_high", "log_pool_exhausted"],
             base_confidence=0.6,
-            recommended_checks=["Identify queries holding connections open", "Right-size the pool"],
+            recommended_checks=[
+                "Identify queries holding connections open",
+                "Right-size the pool",
+            ],
             missing_information=["Per-query connection hold time"],
         ),
         CauseTemplate(
             cause="Load-driven saturation",
             signals=["connections_high", "cpu_high", "throughput_rising"],
             base_confidence=0.45,
-            recommended_checks=["Correlate connections/CPU with traffic", "Consider read replicas or scaling"],
+            recommended_checks=[
+                "Correlate connections/CPU with traffic",
+                "Consider read replicas or scaling",
+            ],
             missing_information=["Traffic trend vs baseline"],
         ),
     ],

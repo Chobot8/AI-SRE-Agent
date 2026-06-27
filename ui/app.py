@@ -136,7 +136,9 @@ def render_diagnosis(diagnosis: dict[str, Any]) -> None:
 def main() -> None:
     st.set_page_config(page_title="AI SRE Agent", layout="wide")
     st.title("AI SRE Agent")
-    st.caption("Replay a sample incident and review the diagnosis, evidence, and safe remediation plan.")
+    st.caption(
+        "Replay a sample incident and review the diagnosis, evidence, and safe remediation plan."
+    )
 
     with st.sidebar:
         st.header("Runbook Demo")
