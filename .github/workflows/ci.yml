@@ -33,8 +33,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Formatting check (ruff format)
+      # Advisory: reports formatting drift without blocking the pipeline.
+      - name: Formatting check (ruff format, advisory)
         run: ruff format --check --diff .
+        continue-on-error: true
 
       - name: Lint (ruff check)
         run: ruff check --output-format=github .

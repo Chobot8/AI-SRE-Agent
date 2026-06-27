@@ -29,7 +29,7 @@ def main(argv: list[str]) -> int:
             f"alert='{incident.alert.summary}', "
             f"{len(incident.metrics)} metric series, {len(incident.logs)} log lines"
         )
-    print(f"\nNormalized incidents written under data/normalized/.")
+    print("\nNormalized incidents written under data/normalized/.")
     return 0
 
 

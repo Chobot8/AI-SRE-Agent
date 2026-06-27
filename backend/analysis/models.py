@@ -77,7 +77,7 @@ class IncidentDiagnosis:
         """Human/UI-friendly rendering."""
         lines = [f"# Incident diagnosis — {self.incident_id} ({self.service})"]
         if self.status == "error":
-            lines += ["", f"**Status:** error", f"> {self.error}"]
+            lines += ["", "**Status:** error", f"> {self.error}"]
             return "\n".join(lines)
         lines += ["", self.summary, "", "## Symptoms"]
         lines += [f"- {s}" for s in self.symptoms] or ["- (none detected)"]

@@ -79,7 +79,9 @@ def test_llm_incomplete_falls_back_to_deterministic() -> None:
         def propose(self, context):
             return [{"cause": "", "evidence": []}]  # invalid -> rejected
 
-    diag = IncidentAnalyzer(retriever=_NoRetriever(), llm=_BadLLM()).diagnose(_incident("pod_crash_loop"))
+    diag = IncidentAnalyzer(retriever=_NoRetriever(), llm=_BadLLM()).diagnose(
+        _incident("pod_crash_loop")
+    )
     assert diag.engine == "deterministic"
     assert "oomkilled" in diag.hypotheses[0].cause.lower()
 
@@ -89,6 +91,8 @@ def test_llm_valid_output_is_used() -> None:
         def propose(self, context):
             return [{"cause": "Custom LLM cause", "confidence": 0.81, "evidence": ["because"]}]
 
-    diag = IncidentAnalyzer(retriever=_NoRetriever(), llm=_GoodLLM()).diagnose(_incident("high_latency"))
+    diag = IncidentAnalyzer(retriever=_NoRetriever(), llm=_GoodLLM()).diagnose(
+        _incident("high_latency")
+    )
     assert diag.engine == "llm"
     assert diag.hypotheses[0].cause == "Custom LLM cause"

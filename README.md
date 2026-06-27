@@ -147,10 +147,11 @@ the top of this README. CI is required to be green before merging.
 
 The pipeline has two stages:
 
-1. **Format, lint, tests & schema checks** — `ruff format --check`,
-   `ruff check`, then `pytest` (the unit suite plus `tests/test_schema.py`, which
-   validates the sample incidents against `sample-data/schema/incident.schema.json`).
-   A formatting, lint, or test failure fails the pipeline.
+1. **Format, lint, tests & schema checks** — `ruff format --check` (advisory,
+   reported but non-blocking), `ruff check`, then `pytest` (the unit suite plus
+   `tests/test_schema.py`, which validates the sample incidents against
+   `sample-data/schema/incident.schema.json`). A lint or test failure fails the
+   pipeline.
 2. **Build container images** — builds both `infra/Dockerfile.backend` and
    `infra/Dockerfile.ui`, then starts the backend image and probes `/health` to
    confirm the container actually runs.
