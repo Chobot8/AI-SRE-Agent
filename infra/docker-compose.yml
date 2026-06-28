@@ -4,12 +4,17 @@
 #   docker compose -f infra/docker-compose.yml up --build
 #
 # Services:
+#   db   - PostgreSQL persistence for incident investigations (KAN-15)
 #   api  - FastAPI backend (health + incident diagnosis endpoints)
 #   ui   - Streamlit incident-triage demo that calls the api over HTTP
 #
 # Notes on scope:
+#   * Persistence (KAN-15) - the db service initializes from infra/db/schema.sql
+#     on first boot (mounted into the init dir) and keeps data in the named
+#     volume `pgdata`. See docs/data-model.md.
 #   * Vector database  - the RAG store is an in-process, JSON-backed index built
-#     from knowledge/runbooks at runtime, so no separate DB container is needed.
+#     from knowledge/runbooks at runtime; embeddings are referenced, not stored
+#     in Postgres yet (pgvector is a later step).
 #   * Mock observability data - the bundled sample-data/incidents/*.json files
 #     are baked into the api image and replayed via the /scenarios API.
 #
@@ -19,6 +24,27 @@
 name: ai-sre-agent
 
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: ai-sre-agent-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sre}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sre_local_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_sre}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Schema is applied automatically the first time the volume is empty.
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sre} -d ${POSTGRES_DB:-ai_sre}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   api:
     build:
       context: ..
@@ -34,8 +60,15 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-local}
       HOST: 0.0.0.0
       PORT: 8000
+      # Connection string for the persistence layer (KAN-15). Quoted because the
+      # value contains ':' and '/'. If you override POSTGRES_* below, set a
+      # matching DATABASE_URL in .env (compose does not nest ${...} expansions).
+      DATABASE_URL: "${DATABASE_URL:-postgresql+psycopg://sre:sre_local_dev@db:5432/ai_sre}"
     ports:
       - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test:
         - CMD
@@ -77,3 +110,6 @@ services:
       retries: 5
       start_period: 20s
     restart: unless-stopped
+
+volumes:
+  pgdata:
