@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 760" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <rect x="0" y="0" width="1000" height="760" fill="#ffffff"/>
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="232" height="760" fill="#f0f2f6"/>
+  <text x="24" y="48" font-size="17" font-weight="700" fill="#0f172a">Runbook Demo</text>
+  <text x="24" y="84" font-size="12" fill="#334155">Backend API URL</text>
+  <rect x="24" y="94" width="184" height="34" rx="6" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="36" y="116" font-size="12" fill="#0f172a">http://localhost:8000</text>
+  <text x="24" y="150" font-size="10.5" fill="#64748b">Start the backend with</text>
+  <text x="24" y="165" font-size="10.5" fill="#64748b">uvicorn backend.main:app</text>
+  <text x="24" y="744" font-size="10" fill="#94a3b8">Representative UI mockup</text>
+
+  <!-- Main: header -->
+  <text x="264" y="52" font-size="30" font-weight="800" fill="#0f172a">AI SRE Agent</text>
+  <text x="264" y="78" font-size="13" fill="#475569">Replay a sample incident and review the diagnosis, evidence, and safe remediation plan.</text>
+
+  <!-- Scenario select + run button -->
+  <text x="264" y="112" font-size="12" fill="#334155">Incident scenario</text>
+  <rect x="264" y="120" width="280" height="36" rx="6" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="278" y="143" font-size="13" fill="#0f172a">high_latency</text>
+  <path d="M520,134 l8,8 l8,-8" fill="none" stroke="#64748b" stroke-width="1.6"/>
+  <rect x="560" y="120" width="150" height="36" rx="6" fill="#ff4b4b"/>
+  <text x="635" y="143" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">Run diagnosis</text>
+
+  <!-- Incident Summary -->
+  <text x="264" y="196" font-size="18" font-weight="700" fill="#0f172a">Incident Summary</text>
+  <text x="264" y="222" font-size="13" fill="#1f2937">CRITICAL alert on checkout-api: checkout-api p99 latency above SLO (1200ms &gt; 500ms)</text>
+  <text x="264" y="240" font-size="13" fill="#1f2937">for 10m. Leading hypothesis: Slow downstream dependency / unindexed query (high confidence).</text>
+
+  <!-- Metrics row -->
+  <g>
+    <rect x="264" y="262" width="220" height="64" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="278" y="286" font-size="11" fill="#64748b">Incident</text>
+    <text x="278" y="312" font-size="20" font-weight="700" fill="#0f172a">INC-1001</text>
+
+    <rect x="498" y="262" width="220" height="64" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="512" y="286" font-size="11" fill="#64748b">Service</text>
+    <text x="512" y="312" font-size="20" font-weight="700" fill="#0f172a">checkout-api</text>
+
+    <rect x="732" y="262" width="220" height="64" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="746" y="286" font-size="11" fill="#64748b">Engine</text>
+    <text x="746" y="312" font-size="20" font-weight="700" fill="#0f172a">deterministic</text>
+  </g>
+
+  <!-- Evidence -->
+  <text x="264" y="364" font-size="18" font-weight="700" fill="#0f172a">Evidence</text>
+  <text x="270" y="388" font-size="12.5" fill="#1f2937">• p99 latency 1200ms breaches the 500ms SLO for 10 minutes</text>
+  <text x="270" y="408" font-size="12.5" fill="#1f2937">• orders-db query time rising while request throughput stays flat</text>
+  <text x="270" y="428" font-size="12.5" fill="#1f2937">• slow-query log lines reference a missing index on orders.user_id</text>
+
+  <!-- Hypotheses -->
+  <text x="264" y="466" font-size="18" font-weight="700" fill="#0f172a">Root-Cause Hypotheses</text>
+  <rect x="264" y="480" width="688" height="96" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="280" y="506" font-size="13.5" font-weight="700" fill="#0f172a">1. Slow downstream dependency / unindexed query  (high, 90%)</text>
+  <text x="280" y="528" font-size="12" fill="#334155">Recommended checks:</text>
+  <text x="290" y="546" font-size="12" fill="#475569">• Inspect slow-query logs for the affected datastore</text>
+  <text x="290" y="564" font-size="12" fill="#475569">• EXPLAIN the suspect query and confirm a missing index</text>
+
+  <!-- Remediation -->
+  <text x="264" y="612" font-size="18" font-weight="700" fill="#0f172a">Remediation Recommendations</text>
+  <rect x="264" y="626" width="688" height="92" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="280" y="652" font-size="13.5" font-weight="700" fill="#0f172a">Add the missing index / optimize the query  |  risk: medium  |  approval required</text>
+  <text x="280" y="674" font-size="12" fill="#334155">A missing index on the hot query is the leading cause of the p99 breach.</text>
+  <text x="280" y="694" font-size="11.5" fill="#64748b">Rollback: Indexes can be dropped; build concurrently to avoid locking.</text>
+  <text x="280" y="711" font-size="11.5" fill="#64748b">Evidence: orders-db query time rising; missing index on orders.user_id</text>
+</svg>
