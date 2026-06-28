@@ -20,6 +20,7 @@ class SubmitResponse(BaseModel):
     """Receipt returned when an incident is submitted/replayed."""
 
     diagnosis_id: str = Field(description="Identifier to fetch the full result.")
+    correlation_id: str = Field(description="Trace ID tying together logs for this diagnosis.")
     incident_id: str
     status: str = Field(description='"ok" or "error".')
 

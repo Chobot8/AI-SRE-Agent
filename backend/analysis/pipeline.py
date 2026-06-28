@@ -16,6 +16,9 @@ from backend.analysis.detectors import detect, symptoms_from_signals
 from backend.analysis.knowledge import CAUSE_TEMPLATES, GENERIC_TEMPLATES, CauseTemplate
 from backend.analysis.llm import LLMClient, validate_llm_hypotheses
 from backend.analysis.models import Hypothesis, IncidentDiagnosis
+from backend.observability import METRICS, get_logger, log_event
+
+_log = get_logger("analysis")
 
 # Optional: runbook retrieval for grounded references (KAN-4). Imported lazily so
 # analysis works even if the RAG layer is unavailable.
@@ -51,6 +54,9 @@ class IncidentAnalyzer:
         try:
             retriever = self._retriever or Retriever(build_index())
             hits = retriever.retrieve(query_from_incident(incident), k=3)
+            METRICS.retrievals_total.inc()
+            METRICS.retrieved_chunks_total.inc(len(hits))
+            log_event(_log, "retrieval.completed", chunks=len(hits))
             return [h.citation for h in hits]
         except Exception:  # pragma: no cover - references are best-effort
             return []
@@ -119,6 +125,7 @@ class IncidentAnalyzer:
 
         # Optional LLM path with deterministic fallback.
         if self._llm is not None:
+            METRICS.llm_calls_total.inc()
             try:
                 raw = self._llm.propose(
                     {"incident": incident, "signals": sorted(signals)}
@@ -126,8 +133,14 @@ class IncidentAnalyzer:
                 cleaned = validate_llm_hypotheses(raw)
             except Exception:
                 cleaned = None
+            tokens = getattr(self._llm, "last_token_usage", None)
+            if isinstance(tokens, (int, float)) and not isinstance(tokens, bool):
+                METRICS.llm_tokens_total.inc(float(tokens))
+            if not cleaned:
+                log_event(_log, "llm.fallback")
             if cleaned:
                 engine = "llm"
+                log_event(_log, "llm.accepted", hypotheses=len(cleaned))
                 hypotheses = [
                     Hypothesis(
                         cause=h["cause"],
