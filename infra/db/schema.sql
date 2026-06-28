@@ -421,4 +421,5 @@ COMMIT;
 -- ALTER TABLE incidents ENABLE ROW LEVEL SECURITY;
 -- CREATE POLICY incidents_tenant_isolation ON incidents
 --     USING (org_id = current_setting('app.current_org')::uuid);
--- (repeat for every org-
+-- (repeat for every org-scoped table)
+-- =====================================================================
