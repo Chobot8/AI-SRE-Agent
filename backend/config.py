@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     # --- Vector store placeholder (used from KAN-4 onward) ---
     vector_store_url: str | None = None
 
+    # --- Database (KAN-16) ---
+    # SQLAlchemy URL for the PostgreSQL persistence layer. None disables the DB
+    # (the agent still runs in-memory). docker-compose sets this to the `db`
+    # service; for host-local dev use localhost. See .env.example.
+    database_url: str | None = None
+    db_schema: str = "sre"
+    db_echo: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:
