@@ -245,12 +245,18 @@ storage layer). The layer is sync SQLAlchemy (psycopg3) and is isolated under
 exchange plain dicts, not ORM objects.
 
 `docker compose up` starts a `db` service with the database/user/password from
-`.env.example` (`POSTGRES_*`, `DATABASE_URL`). Inside compose the host is the
+`.env.example` (`POSTGRES_*`, `DATABASE_URL`), then a one-shot `migrate` service
+runs `alembic upgrade head` to create the schema before the `api` starts — so the
+stack comes up fully migrated with no manual step. Inside compose the host is the
 service name `db`; for host-local work use `localhost`.
 
+For host-local development (running the API/tests outside Docker against the
+compose Postgres):
+
 ```bash
-# 1. Create the schema from an empty database (Alembic; reuses infra/db/schema.sql)
 export DATABASE_URL=postgresql+psycopg://sre:sre_local_dev@localhost:5432/ai_sre
+
+# 1. Create/upgrade the schema from an empty database
 alembic upgrade head
 
 # 2. Seed a default org + one sample investigation (idempotent)
@@ -262,14 +268,17 @@ pytest tests/db
 
 Notes:
 
-- **Migrations** run via the explicit `alembic upgrade head` command (not on
-  container startup). The compose `db` service also applies `infra/db/schema.sql`
-  on first boot for a zero-step quick start — both paths use the same canonical
-  DDL, so they agree.
+- **Alembic is the single schema-creation path.** The initial migration reuses
+  the canonical `infra/db/schema.sql` (and re-running it is safe — the triggers
+  are dropped-if-exists). The compose `migrate` service applies it; there is no
+  separate Postgres init-mount, so the two paths can't diverge. If you have an
+  old `pgdata` volume from before this change, reset it with
+  `docker compose -f infra/docker-compose.yml down -v`.
 - **Connection failures** surface as a clear, secret-free application error
   (`GET /health/db` returns 503; the DSN/password is never logged or echoed).
 - **No secrets committed** — only local-dev defaults live in `.env.example`; real
-  values go in the gitignored `.env`.
+  values go in the gitignored `.env`. CI runs the persistence tests against a
+  throwaway Postgres service.
 
 ---
 

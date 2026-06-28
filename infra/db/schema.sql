@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS organizations (
     updated_at   timestamptz NOT NULL DEFAULT now()
 );
 
+DROP TRIGGER IF EXISTS trg_organizations_updated ON organizations;
 CREATE TRIGGER trg_organizations_updated
     BEFORE UPDATE ON organizations
     FOR EACH ROW EXECUTE FUNCTION sre.set_updated_at();
@@ -122,6 +123,7 @@ CREATE INDEX IF NOT EXISTS idx_incidents_org_status    ON incidents (org_id, sta
 CREATE INDEX IF NOT EXISTS idx_incidents_org_service   ON incidents (org_id, service);
 CREATE INDEX IF NOT EXISTS idx_incidents_replay_of     ON incidents (replay_of_incident_id);
 
+DROP TRIGGER IF EXISTS trg_incidents_updated ON incidents;
 CREATE TRIGGER trg_incidents_updated
     BEFORE UPDATE ON incidents
     FOR EACH ROW EXECUTE FUNCTION sre.set_updated_at();

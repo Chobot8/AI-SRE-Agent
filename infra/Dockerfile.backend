@@ -24,6 +24,13 @@ COPY backend ./backend
 COPY knowledge ./knowledge
 COPY sample-data ./sample-data
 
+# Migrations (KAN-16): Alembic config + versions + the canonical schema.sql the
+# initial migration reuses. Lets the `migrate` compose service run
+# `alembic upgrade head` from this same image.
+COPY alembic.ini ./
+COPY migrations ./migrations
+COPY infra/db ./infra/db
+
 # Run as an unprivileged user; pre-create the writable telemetry dir.
 RUN useradd --create-home --uid 10001 appuser \
     && mkdir -p /app/data \
