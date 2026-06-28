@@ -6,6 +6,49 @@ High-level architecture of the AI SRE Agent. The committed diagram is
 
 ![AI SRE Agent architecture](./architecture.svg)
 
+## Text diagram (ASCII)
+
+A plain-text rendering of the same architecture, for terminals, diffs, and
+environments that don't render the SVG:
+
+```text
+                    ┌──────────────┐
+                    │   Operator   │
+                    └──────┬───────┘
+                           │
+                    ┌──────▼─────────────────┐
+                    │  Streamlit UI (KAN-8)   │
+                    └──────┬─────────────────┘
+                           │ HTTP
+                    ┌──────▼──────────────────────────────────────┐
+                    │  FastAPI API (KAN-7)                         │
+                    │  /incidents/replay · /diagnoses ·            │
+                    │  /scenarios · /health · /metrics             │
+                    └──────┬──────────────────────────────────────┘
+                           │            ▲ diagnosis + plan (JSON)
+   ┌───────────────────────▼────────────┴───────────────────────────┐
+   │  AI SRE Agent core                                              │
+   │                                                                 │
+   │  Sample incidents ──► Telemetry ingestion (KAN-3) ──┐          │
+   │  (5 scenarios, JSON)  mock connectors →             │          │
+   │                       NormalizedIncident            ▼          │
+   │                                               Reasoning (KAN-5)│
+   │  Runbooks ─────────► RAG retrieval (KAN-4) ──►  ranked         │
+   │  (Markdown)          chunk·embed·vector store   hypotheses     │
+   │                      → Retriever (top-k)            │          │
+   │                          runbook context           ▼          │
+   │                                               Remediation (KAN-6)
+   │                                               guardrailed actions
+   │                                               (risk · rollback ·
+   │                                                approval-required)│
+   └─────────────────────────────────────────────────────────────────┘
+
+   Cross-cutting
+   ─ Observability (KAN-12)   correlation ID · structured JSON logs · /metrics
+   ─ Infra & CI  (KAN-10/11)  Docker Compose (api+ui) · GitHub Actions
+                              (ruff · pytest · schema checks · image build)
+```
+
 ## Component overview
 
 A normalized incident (from mock telemetry connectors) plus retrieved runbook
