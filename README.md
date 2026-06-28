@@ -1,143 +1,201 @@
 # AI SRE Agent
 
 [![CI](https://github.com/Chobot8/AI-SRE-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Chobot8/AI-SRE-Agent/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11+-blue)
+![License](https://img.shields.io/badge/status-portfolio%20project-blueviolet)
 
-An AI Site Reliability Engineering agent that detects, explains, and recommends
-actions for common service incidents (high latency, error-rate spikes, pod crash
-loops, queue backlogs, database saturation).
+An AI Site Reliability Engineering agent that turns a service **alert** into a
+ranked, evidence-backed **root-cause diagnosis** and a **safe, guardrailed
+remediation plan** — grounded in operational runbooks via RAG. It **advises**;
+it never executes changes automatically.
 
-This repository currently contains the **service foundation** (KAN-2): a runnable
-FastAPI backend with a health endpoint, configuration management, and the project
-structure for the features that follow.
+> **Problem.** When a service pages, an on-call engineer spends the first 10–15
+> minutes doing the same mechanical first pass every time: pull the metrics and
+> logs, recall the relevant runbook, and form a hypothesis. This agent automates
+> that first pass. Given an incident, it returns a plain-language summary,
+> ranked root-cause hypotheses with supporting evidence and confidence, and a
+> remediation plan where every destructive action is flagged **approval-required**.
 
-## Project structure
+It covers five common production incidents: **high latency, error-rate spikes,
+pod crash loops, queue backlogs, and database saturation.**
 
+---
+
+## Why this project (portfolio positioning)
+
+A deliberately small but **complete vertical slice of production AI engineering
+for SRE** — not a notebook, but a runnable, tested, observable, containerized
+service.
+
+| Area | What it demonstrates |
+| ---- | -------------------- |
+| **AI engineering** | A reasoning pipeline that is deterministic by default with an **optional LLM** path and a safe fallback when model output is incomplete |
+| **RAG** | Runbook knowledge base → chunk → embed → in-process vector store → top-k retrieval that **grounds** every hypothesis in real ops docs |
+| **SRE domain** | Five realistic incident scenarios, signal detectors, confidence-ranked hypotheses, and **guardrailed** remediation (approval-required, rollback notes, no auto-execution) |
+| **Docker** | One-command `docker compose up` stack (API + UI) with health checks and env-driven config |
+| **CI/CD** | GitHub Actions: format, lint, unit tests, JSON-schema checks, and a container image build + health smoke test |
+| **Observability** | The agent observes itself: correlation ID per diagnosis, structured JSON logs, and Prometheus metrics at `/metrics` |
+
+---
+
+## Architecture
+
+![AI SRE Agent architecture](docs/architecture.svg)
+
+The flow: a normalized incident (from mock telemetry connectors) plus retrieved
+runbook context feed a deterministic reasoning core, which produces ranked
+hypotheses; the remediation layer turns those into a guardrailed plan; the API
+serves it and the UI renders it. Observability wraps the whole request, and the
+stack is containerized and CI-gated.
+
+```mermaid
+flowchart LR
+    OP([Operator]) --> UI[Streamlit UI<br/>KAN-8]
+    UI -->|HTTP| API[FastAPI API<br/>KAN-7]
+
+    subgraph CORE[AI SRE Agent core]
+        INC[Sample incidents<br/>5 scenarios JSON] --> TEL[Telemetry ingestion<br/>KAN-3]
+        RB[Runbooks<br/>Markdown] --> RAG[RAG retrieval<br/>KAN-4]
+        TEL -->|NormalizedIncident| REASON[Reasoning<br/>KAN-5]
+        RAG -->|runbook context| REASON
+        REASON --> REMED[Remediation<br/>guardrails · KAN-6]
+    end
+
+    API --> CORE
+    REMED -->|diagnosis + plan JSON| API
+    API -.->|logs · metrics · correlation ID| OBS[(Observability<br/>KAN-12)]
+
+    CI[Docker + CI/CD<br/>KAN-10 / KAN-11] -.-> API
 ```
-AI-SRE-Agent/
-├── backend/              # FastAPI application
-│   ├── main.py           # App entry point (app + root route)
-│   ├── config.py         # Settings via pydantic-settings (env-driven)
-│   ├── api/routes/       # API route modules
-│   │   └── health.py     # GET /health liveness endpoint
-│   └── core/             # Shared domain logic & schemas (grows with KAN-5)
-├── agent/                # AI workflow: RAG + reasoning (KAN-4, KAN-5, KAN-6)
-├── ui/                   # Incident-triage demo UI (KAN-8)
-├── infra/                # Dockerfiles, docker-compose, CI assets (KAN-10, KAN-11)
-├── docs/                 # Architecture and design docs
-├── tests/                # Pytest suite
-├── requirements.txt      # Python dependencies
-├── pyproject.toml        # Project + tooling config
-├── .env.example          # Environment variable template (copy to .env)
-└── .gitignore
-```
 
-## Prerequisites
+| Layer | Module | Ticket |
+| ----- | ------ | ------ |
+| Telemetry ingestion | `backend/telemetry/` (mock Prometheus/Grafana/Loki/alert connectors → `NormalizedIncident`) | KAN-3 |
+| RAG knowledge | `backend/rag/` (chunk → embed → in-process JSON vector store → retriever) | KAN-4 |
+| Reasoning | `backend/analysis/` (signal detectors, ranked hypotheses, deterministic + optional LLM) | KAN-5 |
+| Remediation | `backend/remediation/` (guardrailed actions, risk/rollback, approval-required) | KAN-6 |
+| API | `backend/api/` (FastAPI diagnosis endpoints) | KAN-7 |
+| UI | `ui/app.py` (Streamlit incident triage) | KAN-8 |
+| Observability | `backend/observability/` (correlation IDs, logs, metrics) | KAN-12 |
 
-- Python 3.11+
+A full-resolution diagram is committed at [`docs/architecture.svg`](docs/architecture.svg).
 
-## Setup
+---
+
+## Demo
+
+![Incident triage UI (representative)](docs/ui-demo.svg)
+
+*Representative view of the Streamlit triage UI for the `high_latency` scenario.*
+
+A complete, interview-ready walkthrough of one incident — alert → diagnosis →
+safe remediation — is in **[`docs/demo-script.md`](docs/demo-script.md)**. The
+short version:
 
 ```bash
-# 1. Create and activate a virtual environment
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS / Linux
-source .venv/bin/activate
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Create your local environment file
-cp .env.example .env        # Windows: copy .env.example .env
+docker compose -f infra/docker-compose.yml up --build      # start API + UI
+# open http://localhost:8501, pick "high_latency", click "Run diagnosis"
+curl -s -X POST http://localhost:8000/incidents/replay/high_latency | jq   # or via the API
 ```
 
-## Run
+---
+
+## Quickstart
+
+### Option A — Docker (recommended, only Docker required)
 
 ```bash
-uvicorn backend.main:app --reload
-```
-
-Then open:
-
-- Service root: http://localhost:8000/
-- Health check: http://localhost:8000/health
-- Interactive API docs (OpenAPI): http://localhost:8000/docs
-
-A successful health response looks like:
-
-```json
-{
-  "status": "ok",
-  "service": "AI SRE Agent",
-  "version": "0.1.0",
-  "environment": "local"
-}
-```
-
-## Run with Docker (containerized demo stack)
-
-The whole demo (API + UI) runs in containers via docker-compose (KAN-10). This is
-the easiest way to demo the project on another machine — only Docker is required.
-
-Prerequisites: Docker Engine with Compose v2 (`docker compose version` ≥ 2.24).
-
-```bash
-# From the repo root — build and start the stack
 docker compose -f infra/docker-compose.yml up --build
 ```
 
-This starts two services:
+- API → http://localhost:8000 (`/docs` for live OpenAPI)
+- UI  → http://localhost:8501
 
-- **api** — FastAPI backend at http://localhost:8000 (`/health`, `/docs`)
-- **ui** — Streamlit incident-triage UI at http://localhost:8501
+Both containers expose health checks (`docker compose ps` shows them `healthy`);
+the UI waits for the API to be healthy before starting. Stop with `Ctrl+C`, then
+`docker compose -f infra/docker-compose.yml down`.
 
-The UI waits for the API to report healthy before starting. Both containers expose
-Docker health checks (the API probes `/health`; the UI probes Streamlit's
-`/_stcore/health`), so `docker compose ps` shows each service as `healthy`.
-
-Configuration is read from the environment. Defaults work out of the box; to
-supply local values or LLM keys, copy `.env.example` to `.env` first (it is
-gitignored and loaded automatically — no secrets are committed):
+### Option B — Local Python (3.11+)
 
 ```bash
-cp .env.example .env        # Windows: copy .env.example .env
+python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env                                 # Windows: copy .env.example .env
+
+uvicorn backend.main:app --reload                    # API on :8000
+streamlit run ui/app.py                              # UI on :8501 (separate terminal)
 ```
 
-Stop the stack with `Ctrl+C`, then clean up with:
+No separate vector database is needed — the RAG index is built in-process from
+`knowledge/runbooks/`, and the "mock observability data" is the bundled
+`sample-data/incidents/` replayed through the API.
+
+---
+
+## Usage (API)
+
+| Method & path | Purpose |
+| ------------- | ------- |
+| `GET /scenarios` | List the five sample scenarios and their replay URLs |
+| `POST /incidents/replay/{scenario}` | Replay a bundled scenario → returns `diagnosis_id` + `correlation_id` |
+| `POST /incidents/diagnose` | Submit a normalized incident payload directly |
+| `GET /diagnoses/{diagnosis_id}` | Fetch the full diagnosis + remediation plan |
+| `GET /health` | Liveness probe |
+| `GET /metrics` | Prometheus-format agent metrics |
 
 ```bash
-docker compose -f infra/docker-compose.yml down
+curl -s -X POST http://localhost:8000/incidents/replay/db_saturation | jq
+curl -s http://localhost:8000/diagnoses/<diagnosis_id> | jq
 ```
 
-A separate vector-database container is intentionally **not** included: the RAG
-index is built in-process from `knowledge/runbooks/`, and the "mock observability
-data" is the bundled `sample-data/incidents/` replayed through the API.
+---
 
-## Test
+## How it works
 
-```bash
-pytest
-```
+1. **Telemetry ingestion (KAN-3).** Mock connectors normalize a raw incident
+   (metrics, logs, alert) into a single `NormalizedIncident`. Real
+   Prometheus/Grafana/Loki/Alertmanager connectors are stubbed for later.
+2. **RAG retrieval (KAN-4).** Runbooks are chunked, embedded, and stored in a
+   small in-process vector store; the retriever returns the top-k chunks most
+   relevant to the incident so hypotheses are grounded in operational knowledge.
+3. **Reasoning (KAN-5).** Signal detectors map metrics/logs to symptom tokens,
+   which score a knowledge base of candidate causes into a **ranked, confidence-
+   scored** hypothesis list. Deterministic by default; an optional `LLMClient`
+   can propose richer hypotheses, with automatic fallback if its output is
+   incomplete — so the agent always returns a valid result, with or without a key.
+4. **Remediation (KAN-6).** The leading hypotheses map to suggested actions
+   (investigate, rollback, scale, restart, tune config, page owner, open ticket),
+   each tagged with rationale, evidence, risk, and a rollback note. Destructive
+   or production-impacting actions are **approval-required**, and the agent never
+   auto-executes.
+5. **API + UI (KAN-7 / KAN-8).** A framework-agnostic service layer is exposed
+   via FastAPI and rendered by a Streamlit triage UI.
+6. **Observability (KAN-12).** Every diagnosis runs under a correlation ID,
+   emits structured JSON logs of each step (secrets redacted), and updates
+   Prometheus metrics at `/metrics`.
 
-## Evaluate
+---
 
-KAN-9 adds a deterministic local evaluation baseline in
-`sample-data/evaluation/baseline.json`. It covers the five bundled synthetic
-incident scenarios and checks expected root cause, relevant evidence, runbook
-retrieval quality, and diagnosis completeness.
+## Engineering practices
 
-Run the evaluation checks with:
+- **Tests** — `pytest` suite across telemetry, RAG, analysis, remediation, API,
+  observability, plus a JSON-schema check on the sample data.
+- **Evaluation (KAN-9)** — a deterministic baseline in
+  `sample-data/evaluation/baseline.json` checks expected root cause, evidence,
+  retrieval quality, and diagnosis completeness over all five scenarios:
+  `pytest tests/test_evaluation.py`.
+- **CI (KAN-11)** — every PR and push to `main` runs format, lint, tests, schema
+  checks, and a container image build + `/health` smoke test (badge above).
+- **Observability (KAN-12)** — correlation IDs, structured logs, `/metrics`.
+- **Safety** — advisory only; `AUTO_EXECUTION_ENABLED = False`; destructive
+  actions are flagged approval-required.
+- **Config & secrets** — env-driven via `pydantic-settings`; `.env` is gitignored
+  and only `.env.example` is tracked.
 
-```bash
-pytest tests/test_evaluation.py
-```
+Details on the CI pipeline and the local contributor workflow are in
+[CONTRIBUTING / CI](#continuous-integration) below.
 
-## Configuration
-
-All configuration is read from environment variables (loaded from `.env` in
-development) via `backend/config.py`. See `.env.example` for the full list.
-**Never commit real secrets** — `.env` is gitignored; only `.env.example` is tracked.
+---
 
 ## Observability
 
@@ -151,15 +209,14 @@ every log line for that diagnosis. Requests echo it back in the
 `X-Correlation-ID` response header, and an inbound `X-Correlation-ID` header is
 honoured so a trace can span the UI and the API.
 
-**Structured logs.** Logs are emitted as one JSON object per line to stdout,
-tagged with the correlation ID. Major workflow steps are logged —
-`diagnosis.received`, `retrieval.completed`, `llm.accepted` / `llm.fallback`,
-`diagnosis.completed`, and `request.handled`. Secrets are redacted by field name
-(anything containing `key`, `token`, `secret`, `password`, …), so API keys never
-reach the logs. Set `LOG_FORMAT=text` for human-readable lines during a demo, or
-keep `json` (default) for machine parsing. `LOG_LEVEL` controls verbosity.
+**Structured logs.** One JSON object per line to stdout, tagged with the
+correlation ID. Major steps are logged — `diagnosis.received`,
+`retrieval.completed`, `llm.accepted` / `llm.fallback`, `diagnosis.completed`,
+`request.handled`. Secrets are redacted by field name (anything containing `key`,
+`token`, `secret`, `password`, …). Set `LOG_FORMAT=text` for readable lines
+during a demo; `LOG_LEVEL` controls verbosity.
 
-**Metrics.** Prometheus-format metrics are exposed at `GET /metrics`:
+**Metrics.** Prometheus-format metrics at `GET /metrics`:
 
 | Metric | Type | Meaning |
 | ------ | ---- | ------- |
@@ -172,74 +229,92 @@ keep `json` (default) for machine parsing. `LOG_LEVEL` controls verbosity.
 | `agent_llm_calls_total` | counter | optional LLM client calls |
 | `agent_llm_tokens_total` | counter | LLM tokens used (when the client reports usage) |
 
-**Inspecting behaviour during the demo:**
-
 ```bash
-# 1. Run a diagnosis and note the correlation_id in the response
-curl -s -X POST http://localhost:8000/incidents/replay/high_latency
-
-# 2. Scrape the metrics
-curl -s http://localhost:8000/metrics
-
-# 3. Watch the structured logs (containerized stack)
-docker compose -f infra/docker-compose.yml logs -f api
-# ...or set LOG_FORMAT=text before `uvicorn backend.main:app` for readable logs
+curl -s -X POST http://localhost:8000/incidents/replay/high_latency   # note correlation_id
+curl -s http://localhost:8000/metrics                                  # scrape metrics
+docker compose -f infra/docker-compose.yml logs -f api                 # watch structured logs
 ```
+
+---
+
+## Project structure
+
+```
+AI-SRE-Agent/
+├── backend/
+│   ├── main.py            # FastAPI app: startup, observability middleware, /metrics
+│   ├── config.py          # env-driven settings (pydantic-settings)
+│   ├── telemetry/         # KAN-3 — ingestion + mock connectors → NormalizedIncident
+│   ├── rag/               # KAN-4 — chunk · embed · vector store · retriever
+│   ├── analysis/          # KAN-5 — detectors, knowledge base, reasoning pipeline
+│   ├── remediation/       # KAN-6 — guardrailed remediation advisor + policy
+│   ├── api/               # KAN-7 — routes, schemas, service orchestration
+│   └── observability/     # KAN-12 — correlation IDs, JSON logs, metrics
+├── ui/app.py              # KAN-8 — Streamlit incident-triage UI
+├── knowledge/runbooks/    # KAN-4 — source runbooks (one per scenario)
+├── sample-data/           # 5 incident scenarios + JSON schema + eval baseline
+├── infra/                 # KAN-10/11 — Dockerfiles, docker-compose, (CI assets)
+├── .github/workflows/     # KAN-11 — CI pipeline
+├── docs/                  # architecture.svg, ui-demo.svg, demo-script.md, design docs
+└── tests/                 # pytest suite
+```
+
+---
 
 ## Continuous integration
 
 Every pull request and every push to `main` runs the CI pipeline
 (`.github/workflows/ci.yml`, KAN-11). The build status is shown by the badge at
-the top of this README. CI is required to be green before merging.
+the top of this README.
 
-The pipeline has two stages:
+1. **Format, lint, tests & schema checks** — `ruff format --check` (advisory),
+   `ruff check`, then `pytest` (unit suite plus `tests/test_schema.py`, which
+   validates the sample incidents against `sample-data/schema/incident.schema.json`).
+   A lint or test failure fails the pipeline.
+2. **Build container images** — builds `infra/Dockerfile.backend` and
+   `infra/Dockerfile.ui`, then starts the backend image and probes `/health`.
 
-1. **Format, lint, tests & schema checks** — `ruff format --check` (advisory,
-   reported but non-blocking), `ruff check`, then `pytest` (the unit suite plus
-   `tests/test_schema.py`, which validates the sample incidents against
-   `sample-data/schema/incident.schema.json`). A lint or test failure fails the
-   pipeline.
-2. **Build container images** — builds both `infra/Dockerfile.backend` and
-   `infra/Dockerfile.ui`, then starts the backend image and probes `/health` to
-   confirm the container actually runs.
-
-## Contributing
-
-Local development workflow:
+### Contributing / local workflow
 
 ```bash
-# 1. Set up and install (including dev tools: ruff, pytest, jsonschema)
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# 2. Create a feature branch (named after the ticket where applicable)
 git checkout -b KAN-XX-short-description
 
-# 3. Before opening a PR, run the same checks CI runs:
 ruff format .          # auto-format
-ruff check --fix .     # lint and auto-fix what it can
+ruff check --fix .     # lint and auto-fix
 pytest                 # unit tests + schema checks
-
-# 4. (Optional) verify the containers build and run
-docker compose -f infra/docker-compose.yml up --build
+docker compose -f infra/docker-compose.yml up --build   # optional: verify containers
 ```
 
-Open a pull request against `main`; CI must pass before the change can be merged.
+Open a pull request against `main`; CI must pass before merging.
 
-## Roadmap
+---
 
-This foundation is the basis for the AI SRE Agent backlog (Jira project `KAN`):
+## Project status
 
-| Ticket | Area |
-| ------ | ---- |
-| KAN-3  | Telemetry ingestion layer (metrics, logs, alerts) |
-| KAN-4  | Runbook knowledge base + RAG |
-| KAN-5  | Incident analysis & root-cause hypotheses |
-| KAN-6  | Remediation recommendations with safety guardrails |
-| KAN-7  | Incident diagnosis API endpoints |
-| KAN-8  | Incident triage UI |
-| KAN-9  | Evaluation dataset & tests |
-| KAN-10 | Containerization & docker-compose |
-| KAN-11 | CI pipeline |
-| KAN-12 | Agent observability (logs, metrics, tracing) |
-| KAN-13 | Portfolio README, architecture diagram, demo script |
+Built as a vertical-slice backlog (Jira project `KAN`), KAN-2 → KAN-13:
+
+| Ticket | Area | Status |
+| ------ | ---- | ------ |
+| KAN-2  | Service foundation (FastAPI, config, health) | ✅ |
+| KAN-3  | Telemetry ingestion layer (metrics, logs, alerts) | ✅ |
+| KAN-4  | Runbook knowledge base + RAG | ✅ |
+| KAN-5  | Incident analysis & root-cause hypotheses | ✅ |
+| KAN-6  | Remediation recommendations with safety guardrails | ✅ |
+| KAN-7  | Incident diagnosis API endpoints | ✅ |
+| KAN-8  | Incident triage UI | ✅ |
+| KAN-9  | Evaluation dataset & tests | ✅ |
+| KAN-10 | Containerization & docker-compose | ✅ |
+| KAN-11 | CI pipeline | ✅ |
+| KAN-12 | Agent observability (logs, metrics, tracing) | ✅ |
+| KAN-13 | Portfolio README, architecture diagram, demo script | ✅ |
+
+### Scope & safety notes
+
+This is an MVP focused on a clear, demonstrable slice. **Out of scope:** automatic
+remediation, live integrations with real telemetry backends, multi-incident
+correlation, and auth/RBAC. The agent is **advisory** — see
+[`docs/scope.md`](docs/scope.md) for the full scope and
+[`docs/architecture.md`](docs/architecture.md) for design notes.

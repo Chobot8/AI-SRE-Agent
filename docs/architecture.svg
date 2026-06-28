@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 820" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#475569"/>
+    </marker>
+    <marker id="arrowDashed" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1120" height="820" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="60" y="44" font-size="28" font-weight="700" fill="#0f172a">AI SRE Agent — Architecture</text>
+  <text x="60" y="70" font-size="14" fill="#475569">Alert → diagnosis → safe remediation, grounded in runbooks (RAG). Advisory only; never auto-executes.</text>
+
+  <!-- Top rail: Operator -> UI -> API -->
+  <rect x="60" y="96" width="140" height="56" rx="28" fill="#e2e8f0" stroke="#94a3b8"/>
+  <text x="130" y="121" font-size="14" font-weight="600" fill="#0f172a" text-anchor="middle">Operator</text>
+  <text x="130" y="139" font-size="11" fill="#475569" text-anchor="middle">runs a scenario</text>
+
+  <line x1="200" y1="124" x2="246" y2="124" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="250" y="92" width="250" height="64" rx="10" fill="#eff6ff" stroke="#2563eb"/>
+  <text x="266" y="118" font-size="15" font-weight="700" fill="#1d4ed8">Streamlit UI · KAN-8</text>
+  <text x="266" y="138" font-size="11.5" fill="#334155">incident selector + diagnosis view</text>
+
+  <line x1="500" y1="124" x2="556" y2="124" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="560" y="92" width="320" height="64" rx="10" fill="#eef2ff" stroke="#4f46e5"/>
+  <text x="576" y="116" font-size="15" font-weight="700" fill="#4338ca">FastAPI API · KAN-7</text>
+  <text x="576" y="136" font-size="11" fill="#334155">/incidents/replay · /diagnoses · /scenarios · /health · /metrics</text>
+
+  <!-- Observability rail (right, cross-cutting) -->
+  <rect x="900" y="92" width="190" height="520" rx="12" fill="#f8fafc" stroke="#475569" stroke-dasharray="6 4"/>
+  <text x="995" y="120" font-size="14" font-weight="700" fill="#334155" text-anchor="middle">Observability</text>
+  <text x="995" y="138" font-size="11" fill="#64748b" text-anchor="middle">KAN-12 · cross-cutting</text>
+  <text x="918" y="178" font-size="12" fill="#334155">• Correlation ID per</text>
+  <text x="930" y="194" font-size="12" fill="#334155">diagnosis (tracing)</text>
+  <text x="918" y="226" font-size="12" fill="#334155">• Structured JSON logs</text>
+  <text x="930" y="242" font-size="12" fill="#334155">of workflow steps</text>
+  <text x="918" y="274" font-size="12" fill="#334155">• /metrics (Prometheus)</text>
+  <text x="930" y="290" font-size="12" fill="#334155">requests, latency,</text>
+  <text x="930" y="306" font-size="12" fill="#334155">retrieval, LLM calls</text>
+  <text x="918" y="338" font-size="12" fill="#334155">• Secret redaction in</text>
+  <text x="930" y="354" font-size="12" fill="#334155">logs (no API keys)</text>
+  <line x1="880" y1="150" x2="898" y2="200" stroke="#64748b" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrowDashed)"/>
+  <line x1="880" y1="380" x2="898" y2="330" stroke="#64748b" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrowDashed)"/>
+
+  <!-- Core container -->
+  <rect x="60" y="184" width="820" height="430" rx="14" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="76" y="208" font-size="13" font-weight="700" fill="#64748b">AI SRE AGENT CORE</text>
+
+  <!-- Inputs -->
+  <rect x="80" y="232" width="170" height="70" rx="10" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="96" y="262" font-size="13" font-weight="700" fill="#0f172a">Sample incidents</text>
+  <text x="96" y="281" font-size="11" fill="#475569">5 scenarios · JSON</text>
+  <text x="96" y="296" font-size="11" fill="#475569">(mock telemetry)</text>
+
+  <rect x="80" y="452" width="170" height="70" rx="10" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="96" y="482" font-size="13" font-weight="700" fill="#0f172a">Runbooks</text>
+  <text x="96" y="501" font-size="11" fill="#475569">knowledge/runbooks</text>
+  <text x="96" y="516" font-size="11" fill="#475569">Markdown</text>
+
+  <!-- Telemetry ingestion -->
+  <rect x="288" y="222" width="216" height="120" rx="10" fill="#f0fdfa" stroke="#0d9488"/>
+  <text x="304" y="248" font-size="14" font-weight="700" fill="#0f766e">Telemetry ingestion · KAN-3</text>
+  <text x="304" y="270" font-size="11.5" fill="#334155">mock connectors:</text>
+  <text x="304" y="288" font-size="11.5" fill="#334155">Prometheus · Grafana · Loki</text>
+  <text x="304" y="306" font-size="11.5" fill="#334155">· Alertmanager</text>
+  <text x="304" y="330" font-size="11.5" font-weight="600" fill="#0f766e">→ NormalizedIncident</text>
+
+  <!-- RAG -->
+  <rect x="288" y="402" width="216" height="120" rx="10" fill="#f5f3ff" stroke="#7c3aed"/>
+  <text x="304" y="428" font-size="14" font-weight="700" fill="#6d28d9">RAG retrieval · KAN-4</text>
+  <text x="304" y="450" font-size="11.5" fill="#334155">chunk → embed → vector store</text>
+  <text x="304" y="468" font-size="11.5" fill="#334155">(in-process, JSON index)</text>
+  <text x="304" y="492" font-size="11.5" font-weight="600" fill="#6d28d9">→ Retriever (top-k chunks)</text>
+  <text x="304" y="510" font-size="11" fill="#64748b">grounds hypotheses in ops docs</text>
+
+  <!-- Reasoning -->
+  <rect x="540" y="250" width="158" height="150" rx="10" fill="#fffbeb" stroke="#b45309"/>
+  <text x="556" y="276" font-size="14" font-weight="700" fill="#b45309">Reasoning</text>
+  <text x="556" y="293" font-size="12" fill="#92400e">KAN-5</text>
+  <text x="556" y="318" font-size="11.5" fill="#334155">signal detectors</text>
+  <text x="556" y="336" font-size="11.5" fill="#334155">ranked root-cause</text>
+  <text x="556" y="352" font-size="11.5" fill="#334155">hypotheses + confidence</text>
+  <text x="556" y="376" font-size="11" fill="#64748b">deterministic core,</text>
+  <text x="556" y="391" font-size="11" fill="#64748b">optional LLM + fallback</text>
+
+  <!-- Remediation -->
+  <rect x="710" y="250" width="150" height="150" rx="10" fill="#fef2f2" stroke="#b91c1c"/>
+  <text x="726" y="276" font-size="14" font-weight="700" fill="#b91c1c">Remediation</text>
+  <text x="726" y="293" font-size="12" fill="#991b1b">KAN-6</text>
+  <text x="726" y="318" font-size="11.5" fill="#334155">guardrailed actions</text>
+  <text x="726" y="336" font-size="11.5" fill="#334155">risk + rollback note</text>
+  <text x="726" y="354" font-size="11.5" fill="#334155">approval-required</text>
+  <text x="726" y="378" font-size="11" font-weight="600" fill="#b91c1c">never auto-executes</text>
+
+  <!-- Core arrows -->
+  <line x1="250" y1="267" x2="284" y2="267" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="250" y1="487" x2="284" y2="487" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="504" y1="285" x2="536" y2="312" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="504" y1="455" x2="536" y2="360" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="512" y="405" font-size="10.5" fill="#64748b">runbook context</text>
+  <line x1="698" y1="325" x2="706" y2="325" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Result back up to API -->
+  <path d="M785,250 L785,168 L876,168" fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="792" y="208" font-size="11" fill="#475569">diagnosis + plan (JSON)</text>
+
+  <!-- Infra / CI bottom rail -->
+  <rect x="60" y="648" width="1030" height="96" rx="12" fill="#f0fdf4" stroke="#15803d"/>
+  <text x="80" y="676" font-size="14" font-weight="700" fill="#15803d">Infrastructure &amp; CI/CD</text>
+  <text x="80" y="700" font-size="12" fill="#334155">Docker Compose · KAN-10 — api + ui containers, health checks, env-driven config</text>
+  <text x="80" y="720" font-size="12" fill="#334155">GitHub Actions · KAN-11 — ruff · pytest · schema checks · container image build + smoke test</text>
+  <text x="80" y="736" font-size="11.5" fill="#64748b">Evaluation baseline · KAN-9 — deterministic checks over the five sample scenarios</text>
+
+  <!-- Footer -->
+  <text x="1090" y="792" font-size="11" fill="#94a3b8" text-anchor="end">AI SRE Agent · KAN-2 → KAN-13 · advisory SRE copilot</text>
+</svg>
