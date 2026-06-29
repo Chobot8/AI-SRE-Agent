@@ -26,7 +26,11 @@ def submit_incident(
     incident: IncidentRequest,
     service: DiagnosisService = Depends(get_service),
 ) -> SubmitResponse:
-    """Submit a normalized incident; returns a diagnosis id to fetch the result."""
+    """Submit a normalized incident (live only — never persisted).
+
+    Returns a diagnosis id to fetch the live result via ``GET /diagnoses/{id}``.
+    Use ``POST /incidents`` for the durable, persisted path.
+    """
     receipt = service.submit(incident.model_dump(mode="json"))
     return SubmitResponse(**receipt)
 
@@ -36,7 +40,13 @@ def replay_scenario(
     scenario: str,
     service: DiagnosisService = Depends(get_service),
 ) -> SubmitResponse:
-    """Replay a bundled sample scenario by name (see GET /scenarios)."""
+    """Replay a bundled sample scenario by name (see GET /scenarios).
+
+    Persisted best-effort: the investigation is stored when a database is
+    configured, but a live result is still returned (``investigation_id: null``)
+    without one, so the demo works DB-free. For a guaranteed durable write use
+    ``POST /incidents``.
+    """
     receipt = service.replay(scenario)
     if receipt is None:
         raise HTTPException(
