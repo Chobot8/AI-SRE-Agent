@@ -230,12 +230,15 @@ fields), and the application enforces the *content*.
 A `db` service is added to `infra/docker-compose.yml`:
 
 * Image `postgres:16-alpine`, named volume `pgdata` for persistence.
-* `infra/db/schema.sql` is mounted into `/docker-entrypoint-initdb.d/`, so a
-  fresh database is created with the full schema on first boot — no manual step.
+* **Alembic is the single schema-creation path (KAN-16).** A one-shot `migrate`
+  service runs `alembic upgrade head` against the `db` service on startup; the
+  initial migration reuses this `schema.sql` as its DDL. There is no
+  `/docker-entrypoint-initdb.d/` mount, so the two paths can't diverge.
 * Credentials and database name come from environment variables with safe local
   defaults (see `.env.example`); no secrets are committed.
-* The `api` service gains a `DATABASE_URL` and a `depends_on` health-gate so it
-  only starts once Postgres is accepting connections.
+* The `api` service gains a `DATABASE_URL` and waits for both the `db` health-gate
+  and the `migrate` service to complete, so it only starts once Postgres is
+  accepting connections and the schema is up to date.
 
 ```bash
 # bring up Postgres + api + ui locally

@@ -18,6 +18,23 @@ jobs:
   lint-test:
     name: Format, lint, tests & schema checks
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sre
+          POSTGRES_PASSWORD: sre_local_dev
+          POSTGRES_DB: ai_sre
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sre -d ai_sre"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Persistence tests (KAN-16) run against the postgres service above.
+      DATABASE_URL: postgresql+psycopg://sre:sre_local_dev@localhost:5432/ai_sre
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,6 +57,10 @@ jobs:
 
       - name: Lint (ruff check)
         run: ruff check --output-format=github .
+
+      # Create the schema from an empty DB via Alembic (single schema path).
+      - name: Apply database migrations
+        run: alembic upgrade head
 
       - name: Unit tests + schema checks (pytest)
         run: pytest -q

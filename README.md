@@ -237,6 +237,51 @@ docker compose -f infra/docker-compose.yml logs -f api                 # watch s
 
 ---
 
+## Persistence (PostgreSQL)
+
+Incidents and agent outputs are durable in PostgreSQL (KAN-15 design, KAN-16
+storage layer). The layer is sync SQLAlchemy (psycopg3) and is isolated under
+`backend/db/` so the agent workflow stays decoupled from SQL — repositories
+exchange plain dicts, not ORM objects.
+
+`docker compose up` starts a `db` service with the database/user/password from
+`.env.example` (`POSTGRES_*`, `DATABASE_URL`), then a one-shot `migrate` service
+runs `alembic upgrade head` to create the schema before the `api` starts — so the
+stack comes up fully migrated with no manual step. Inside compose the host is the
+service name `db`; for host-local work use `localhost`.
+
+For host-local development (running the API/tests outside Docker against the
+compose Postgres):
+
+```bash
+export DATABASE_URL=postgresql+psycopg://sre:sre_local_dev@localhost:5432/ai_sre
+
+# 1. Create/upgrade the schema from an empty database
+alembic upgrade head
+
+# 2. Seed a default org + one sample investigation (idempotent)
+python -m backend.db.seed
+
+# 3. Run the persistence tests (skip automatically if no database is reachable)
+pytest tests/db
+```
+
+Notes:
+
+- **Alembic is the single schema-creation path.** The initial migration reuses
+  the canonical `infra/db/schema.sql` (and re-running it is safe — the triggers
+  are dropped-if-exists). The compose `migrate` service applies it; there is no
+  separate Postgres init-mount, so the two paths can't diverge. If you have an
+  old `pgdata` volume from before this change, reset it with
+  `docker compose -f infra/docker-compose.yml down -v`.
+- **Connection failures** surface as a clear, secret-free application error
+  (`GET /health/db` returns 503; the DSN/password is never logged or echoed).
+- **No secrets committed** — only local-dev defaults live in `.env.example`; real
+  values go in the gitignored `.env`. CI runs the persistence tests against a
+  throwaway Postgres service.
+
+---
+
 ## Project structure
 
 ```
@@ -249,14 +294,17 @@ AI-SRE-Agent/
 │   ├── analysis/          # KAN-5 — detectors, knowledge base, reasoning pipeline
 │   ├── remediation/       # KAN-6 — guardrailed remediation advisor + policy
 │   ├── api/               # KAN-7 — routes, schemas, service orchestration
-│   └── observability/     # KAN-12 — correlation IDs, JSON logs, metrics
+│   ├── observability/     # KAN-12 — correlation IDs, JSON logs, metrics
+│   └── db/                # KAN-16 — session, ORM models, repositories, seed
 ├── ui/app.py              # KAN-8 — Streamlit incident-triage UI
 ├── knowledge/runbooks/    # KAN-4 — source runbooks (one per scenario)
 ├── sample-data/           # 5 incident scenarios + JSON schema + eval baseline
-├── infra/                 # KAN-10/11 — Dockerfiles, docker-compose, (CI assets)
+├── infra/                 # KAN-10/11 — Dockerfiles, docker-compose; db/schema.sql (KAN-15)
+├── migrations/            # KAN-16 — Alembic env + versions (initial schema)
+├── alembic.ini            # KAN-16 — Alembic config (URL from settings, no secrets)
 ├── .github/workflows/     # KAN-11 — CI pipeline
 ├── docs/                  # architecture.svg, ui-demo.svg, demo-script.md, design docs
-└── tests/                 # pytest suite
+└── tests/                 # pytest suite (incl. tests/db/ persistence tests)
 ```
 
 ---
