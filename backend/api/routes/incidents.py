@@ -22,6 +22,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.api import persistence
+from backend.api.persistence import PersistenceError
 from backend.api.schemas import (
     AgentRunResponse,
     IncidentListResponse,
@@ -60,8 +61,24 @@ def submit_incident(
     incident: IncidentRequest,
     service: DiagnosisService = Depends(get_service),
 ) -> SubmitResponse:
-    """Submit a normalized incident; runs the agent and persists the result."""
-    receipt = service.submit(incident.model_dump(mode="json"))
+    """Submit a normalized incident; runs the agent and durably persists it.
+
+    This endpoint guarantees durability: it returns 503 when no database is
+    configured and surfaces a storage failure as 503 (never a 201 with an
+    unsaved investigation).
+    """
+    _require_persistence()
+    try:
+        receipt = service.submit(
+            incident.model_dump(mode="json"),
+            persist=True,
+            require_persistence=True,
+        )
+    except PersistenceError:
+        raise HTTPException(
+            status_code=503,
+            detail="Failed to persist the investigation; it was not stored.",
+        )
     return SubmitResponse(**receipt)
 
 

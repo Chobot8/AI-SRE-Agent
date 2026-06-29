@@ -19,6 +19,16 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+
+class PersistenceError(RuntimeError):
+    """Raised when a durable write fails on an endpoint that requires storage.
+
+    Lets the API distinguish a best-effort persist (failure tolerated) from a
+    durable-contract persist (failure must surface to the caller, never reported
+    as success).
+    """
+
+
 # Default tenant for the single-tenant MVP (matches backend.db.seed).
 DEFAULT_ORG_SLUG = "local"
 DEFAULT_ORG_NAME = "Local Dev"

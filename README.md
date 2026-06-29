@@ -137,9 +137,9 @@ No separate vector database is needed — the RAG index is built in-process from
 | Method & path | Purpose |
 | ------------- | ------- |
 | `GET /scenarios` | List the five sample scenarios and their replay URLs |
-| `POST /incidents/replay/{scenario}` | Replay a bundled scenario → returns `diagnosis_id` + `investigation_id` |
-| `POST /incidents` | Submit a normalized incident; runs the agent and persists the investigation |
-| `POST /incidents/diagnose` | Submit a normalized incident payload directly (live result only) |
+| `POST /incidents` | Submit a normalized incident; runs the agent and **durably** persists it (requires a DB) |
+| `POST /incidents/replay/{scenario}` | Replay a bundled scenario; persisted best-effort (`investigation_id` is null when no DB) |
+| `POST /incidents/diagnose` | Submit a normalized incident payload directly (live result only, never persisted) |
 | `GET /incidents` | List recent investigations; filter by `service`, `severity`, `status`, `scenario` |
 | `GET /incidents/{incident_id}` | Fetch a full **stored** investigation (durable history) |
 | `GET /agent-runs/{run_id}` | Inspect agent run metadata (status, engine, timing, correlation) |
@@ -147,13 +147,18 @@ No separate vector database is needed — the RAG index is built in-process from
 | `GET /health` | Liveness probe |
 | `GET /metrics` | Prometheus-format agent metrics |
 
-When `DATABASE_URL` is set, every submission/replay is written to PostgreSQL
-(incident, agent run, evidence, retrieved chunks, diagnosis, ranked hypotheses,
-and recommendations), so investigations survive restarts and power a history
-view. Without a database the agent still runs and the live `/diagnoses` endpoint
-works; the durable `/incidents` endpoints return `503`. Incident processing is
-**synchronous** for MVP simplicity — a submission returns once the investigation
-is stored, so clients never poll.
+Durability contract: `POST /incidents` is the durable path — it **requires** a
+database (returns `503` when `DATABASE_URL` is unset and `503` if the write
+fails, never a `201` with an unsaved result). When a database is configured it
+stores the full chain (incident, agent run, evidence, retrieved chunks,
+diagnosis, ranked hypotheses, recommendations), so investigations survive
+restarts and power a history view. `POST /incidents/replay/{scenario}` is a
+convenience that persists **best-effort** — it stores the investigation when a
+database is configured but still returns a live result (`investigation_id:
+null`) without one, so the demo runs DB-free. `POST /incidents/diagnose` is
+live-only and never persists. Incident processing is **synchronous** for MVP
+simplicity — a submission returns once the investigation is stored, so clients
+never poll.
 
 ```bash
 # Durable submit → fetch the stored investigation back
@@ -165,7 +170,7 @@ curl -s http://localhost:8000/incidents/$investigation_id | jq
 # List recent investigations, filtered
 curl -s 'http://localhost:8000/incidents?scenario=high_latency&status=succeeded' | jq
 
-# Replay a bundled scenario (also persisted)
+# Replay a bundled scenario (persisted best-effort when a DB is configured)
 curl -s -X POST http://localhost:8000/incidents/replay/db_saturation | jq
 ```
 

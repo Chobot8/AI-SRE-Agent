@@ -17,6 +17,7 @@ from pathlib import Path
 
 from backend.analysis import diagnose_incident
 from backend.api.persistence import (
+    PersistenceError,
     build_investigation_payload,
     persist_investigation,
     persistence_enabled,
@@ -44,13 +45,28 @@ class DiagnosisService:
         self._store: dict[str, dict] = {}
         self._retriever = None  # built lazily for retrieved-chunk persistence
 
-    def submit(self, incident: dict, *, is_replay: bool = False) -> dict:
+    def submit(
+        self,
+        incident: dict,
+        *,
+        is_replay: bool = False,
+        persist: bool = False,
+        require_persistence: bool = False,
+    ) -> dict:
         """Diagnose + recommend for an incident; store and return a receipt.
 
         Runs under a correlation ID (reusing the request's if one is bound) that
         is attached to the stored result and every log line for the diagnosis.
-        When a database is configured the full investigation is also persisted to
-        PostgreSQL (best-effort: a storage failure never breaks the live result).
+
+        Persistence is opt-in so the live-only endpoints never write to the
+        durable store:
+
+        * ``persist=False`` (default) — in-memory result only.
+        * ``persist=True, require_persistence=False`` — best-effort durable write
+          (a storage failure is logged and tolerated; ``investigation_id`` is None).
+        * ``persist=True, require_persistence=True`` — durable contract: a missing
+          or failing store raises :class:`PersistenceError` so the API never
+          reports success without actually storing the investigation.
         """
         with correlation_context(get_correlation_id()) as correlation_id:
             scenario = "unknown"
@@ -85,14 +101,17 @@ class DiagnosisService:
                 hypotheses=len(diagnosis.hypotheses),
             )
 
-            investigation_id = self._persist(
-                incident=incident,
-                diagnosis=diagnosis,
-                plan=plan,
-                correlation_id=correlation_id,
-                latency_ms=latency_ms,
-                is_replay=is_replay,
-            )
+            investigation_id = None
+            if persist:
+                investigation_id = self._persist(
+                    incident=incident,
+                    diagnosis=diagnosis,
+                    plan=plan,
+                    correlation_id=correlation_id,
+                    latency_ms=latency_ms,
+                    is_replay=is_replay,
+                    require=require_persistence,
+                )
             if investigation_id is not None:
                 result["investigation_id"] = investigation_id
 
@@ -113,13 +132,21 @@ class DiagnosisService:
         correlation_id: str,
         latency_ms: int,
         is_replay: bool,
+        require: bool = False,
     ) -> str | None:
         """Persist the full investigation to PostgreSQL; return its incident id.
 
-        Returns None when persistence is disabled or fails (the live, in-memory
-        result is always available regardless).
+        Returns None when persistence is unavailable or fails and ``require`` is
+        False (best-effort). When ``require`` is True, an unavailable or failing
+        store raises :class:`PersistenceError` instead of silently returning None.
         """
-        if not isinstance(incident, dict) or not persistence_enabled():
+        if not isinstance(incident, dict):
+            if require:
+                raise PersistenceError("Incident payload is not an object.")
+            return None
+        if not persistence_enabled():
+            if require:
+                raise PersistenceError("Persistence is not configured.")
             return None
         try:
             run_status = "succeeded" if diagnosis.status == "ok" else "failed"
@@ -149,9 +176,13 @@ class DiagnosisService:
                 run_status=run_status,
             )
             return investigation_id
-        except Exception as exc:  # best-effort: never break the live response
+        except Exception as exc:
             log_event(_log, "persistence.failed", error=type(exc).__name__)
-            return None
+            if require:
+                raise PersistenceError(
+                    f"Failed to persist the investigation ({type(exc).__name__})."
+                ) from exc
+            return None  # best-effort: never break the live response
 
     def _retrieve_chunks(self, incident: dict) -> list[dict]:
         """Best-effort RAG retrieval, mapped to retrieved_chunks rows."""
@@ -194,7 +225,9 @@ class DiagnosisService:
         sample = self.load_sample(scenario)
         if sample is None:
             return None
-        return self.submit(sample, is_replay=True)
+        # Replay persists best-effort: durable when a DB is configured, but still
+        # returns a live result (201) when one is not.
+        return self.submit(sample, is_replay=True, persist=True)
 
 
 _service: DiagnosisService | None = None

@@ -62,6 +62,31 @@ def test_list_rejects_out_of_range_limit() -> None:
     assert client.get("/incidents", params={"limit": 0}).status_code == 422
 
 
+# --- Durable contract for POST /incidents (no real DB required) ---------------
+
+
+def test_submit_requires_persistence(monkeypatch) -> None:
+    """POST /incidents returns 503 (not a fake 201) when no store is configured."""
+    monkeypatch.setattr(
+        "backend.api.persistence.persistence_enabled", lambda: False
+    )
+    r = client.post("/incidents", json=_incident("high_latency"))
+    assert r.status_code == 503
+
+
+def test_submit_surfaces_persistence_failure(monkeypatch) -> None:
+    """A storage failure surfaces as 503 instead of a 201 with no stored result."""
+    monkeypatch.setattr("backend.api.persistence.persistence_enabled", lambda: True)
+    monkeypatch.setattr("backend.api.service.persistence_enabled", lambda: True)
+
+    def _boom(payload):
+        raise RuntimeError("database unavailable")
+
+    monkeypatch.setattr("backend.api.service.persist_investigation", _boom)
+    r = client.post("/incidents", json=_incident("high_latency"))
+    assert r.status_code == 503
+
+
 # --- Success path -------------------------------------------------------------
 
 
@@ -85,6 +110,14 @@ def test_submit_persists_and_can_be_fetched() -> None:
     # Enough to reproduce the visible diagnosis output.
     assert isinstance(body["evidence"], list)
     assert isinstance(body["retrieved_chunks"], list)
+
+
+@requires_db
+def test_live_diagnose_endpoint_does_not_persist() -> None:
+    """The legacy live endpoint must not write to durable history."""
+    r = client.post("/incidents/diagnose", json=_incident("high_latency"))
+    assert r.status_code == 201
+    assert r.json().get("investigation_id") is None
 
 
 @requires_db

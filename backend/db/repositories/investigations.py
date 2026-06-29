@@ -13,6 +13,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
+from sqlalchemy import func
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -153,13 +154,26 @@ class InvestigationRepository:
         if scenario:
             stmt = stmt.where(models.Incident.scenario == scenario)
         if status:
-            stmt = stmt.where(
-                models.Incident.id.in_(
-                    select(models.AgentRun.incident_id).where(
-                        models.AgentRun.status == status
-                    )
+            # Match on the *latest* run per incident so the filter is consistent
+            # with the run_status shown in the response (not just "any run").
+            latest_created = (
+                select(
+                    models.AgentRun.incident_id.label("incident_id"),
+                    func.max(models.AgentRun.created_at).label("max_created"),
                 )
+                .group_by(models.AgentRun.incident_id)
+                .subquery()
             )
+            latest_with_status = (
+                select(models.AgentRun.incident_id)
+                .join(
+                    latest_created,
+                    (models.AgentRun.incident_id == latest_created.c.incident_id)
+                    & (models.AgentRun.created_at == latest_created.c.max_created),
+                )
+                .where(models.AgentRun.status == status)
+            )
+            stmt = stmt.where(models.Incident.id.in_(latest_with_status))
         stmt = stmt.order_by(models.Incident.created_at.desc()).limit(limit)
 
         summaries: list[dict[str, Any]] = []
