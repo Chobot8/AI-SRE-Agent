@@ -137,15 +137,36 @@ No separate vector database is needed — the RAG index is built in-process from
 | Method & path | Purpose |
 | ------------- | ------- |
 | `GET /scenarios` | List the five sample scenarios and their replay URLs |
-| `POST /incidents/replay/{scenario}` | Replay a bundled scenario → returns `diagnosis_id` + `correlation_id` |
-| `POST /incidents/diagnose` | Submit a normalized incident payload directly |
-| `GET /diagnoses/{diagnosis_id}` | Fetch the full diagnosis + remediation plan |
+| `POST /incidents/replay/{scenario}` | Replay a bundled scenario → returns `diagnosis_id` + `investigation_id` |
+| `POST /incidents` | Submit a normalized incident; runs the agent and persists the investigation |
+| `POST /incidents/diagnose` | Submit a normalized incident payload directly (live result only) |
+| `GET /incidents` | List recent investigations; filter by `service`, `severity`, `status`, `scenario` |
+| `GET /incidents/{incident_id}` | Fetch a full **stored** investigation (durable history) |
+| `GET /agent-runs/{run_id}` | Inspect agent run metadata (status, engine, timing, correlation) |
+| `GET /diagnoses/{diagnosis_id}` | Fetch the live (in-memory) diagnosis + remediation plan |
 | `GET /health` | Liveness probe |
 | `GET /metrics` | Prometheus-format agent metrics |
 
+When `DATABASE_URL` is set, every submission/replay is written to PostgreSQL
+(incident, agent run, evidence, retrieved chunks, diagnosis, ranked hypotheses,
+and recommendations), so investigations survive restarts and power a history
+view. Without a database the agent still runs and the live `/diagnoses` endpoint
+works; the durable `/incidents` endpoints return `503`. Incident processing is
+**synchronous** for MVP simplicity — a submission returns once the investigation
+is stored, so clients never poll.
+
 ```bash
+# Durable submit → fetch the stored investigation back
+investigation_id=$(curl -s -X POST http://localhost:8000/incidents \
+  -H 'content-type: application/json' \
+  -d @sample-data/incidents/high_latency.json | jq -r .investigation_id)
+curl -s http://localhost:8000/incidents/$investigation_id | jq
+
+# List recent investigations, filtered
+curl -s 'http://localhost:8000/incidents?scenario=high_latency&status=succeeded' | jq
+
+# Replay a bundled scenario (also persisted)
 curl -s -X POST http://localhost:8000/incidents/replay/db_saturation | jq
-curl -s http://localhost:8000/diagnoses/<diagnosis_id> | jq
 ```
 
 ---

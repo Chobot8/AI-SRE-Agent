@@ -115,6 +115,80 @@ class InvestigationRepository:
             "diagnosis_id": diag_id,
         }
 
+    def latest_run_for_incident(self, incident_id: uuid.UUID) -> models.AgentRun | None:
+        """Return the most recent agent run for an incident, if any."""
+        stmt = (
+            select(models.AgentRun)
+            .where(models.AgentRun.incident_id == incident_id)
+            .order_by(models.AgentRun.created_at.desc())
+        )
+        return self.session.scalars(stmt).first()
+
+    def get_agent_run(self, run_id: uuid.UUID) -> dict[str, Any] | None:
+        """Return a single agent run's metadata as a JSON-friendly dict, or None."""
+        run = self.runs.get(run_id)
+        return _row_to_dict(run) if run is not None else None
+
+    def list_recent(
+        self,
+        org_id: uuid.UUID,
+        *,
+        service: str | None = None,
+        severity: str | None = None,
+        status: str | None = None,
+        scenario: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """Return recent investigations (most recent first) as summary dicts.
+
+        ``status`` filters on the latest agent run's status
+        (queued/running/succeeded/failed); the remaining filters apply to the
+        incident's intake context.
+        """
+        stmt = select(models.Incident).where(models.Incident.org_id == org_id)
+        if service:
+            stmt = stmt.where(models.Incident.service == service)
+        if severity:
+            stmt = stmt.where(models.Incident.severity == severity)
+        if scenario:
+            stmt = stmt.where(models.Incident.scenario == scenario)
+        if status:
+            stmt = stmt.where(
+                models.Incident.id.in_(
+                    select(models.AgentRun.incident_id).where(
+                        models.AgentRun.status == status
+                    )
+                )
+            )
+        stmt = stmt.order_by(models.Incident.created_at.desc()).limit(limit)
+
+        summaries: list[dict[str, Any]] = []
+        for inc in self.session.scalars(stmt):
+            diag = self.diagnoses.current_for_incident(inc.id)
+            run = self.latest_run_for_incident(inc.id)
+            top = self.hypotheses.for_diagnosis(diag.id)[:1] if diag else []
+            summaries.append(
+                {
+                    "incident_id": str(inc.id),
+                    "external_ref": inc.external_ref,
+                    "service": inc.service,
+                    "scenario": inc.scenario,
+                    "severity": inc.severity,
+                    "status": inc.status,
+                    "title": inc.title,
+                    "summary": inc.summary,
+                    "is_replay": inc.is_replay,
+                    "intake_source": inc.intake_source,
+                    "run_id": str(run.id) if run else None,
+                    "run_status": run.status if run else None,
+                    "engine": run.engine if run else None,
+                    "diagnosis_status": diag.status if diag else None,
+                    "top_hypothesis": top[0].cause if top else None,
+                    "created_at": _jsonable(inc.created_at),
+                }
+            )
+        return summaries
+
     def get_full(self, incident_id: uuid.UUID) -> dict[str, Any] | None:
         """Return the whole investigation as JSON-friendly dicts, or None."""
         inc = self.incidents.get(incident_id)

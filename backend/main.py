@@ -16,7 +16,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 
 from backend import __version__
-from backend.api.routes import diagnosis, health
+from backend.api.routes import diagnosis, health, incidents
 from backend.config import get_settings
 from backend.observability import (
     CONTENT_TYPE,
@@ -91,6 +91,7 @@ def metrics() -> PlainTextResponse:
 
 app.include_router(health.router)
 app.include_router(diagnosis.router)
+app.include_router(incidents.router)
 
 
 @app.get("/", tags=["meta"])
