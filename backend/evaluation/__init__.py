@@ -1,23 +1,18 @@
-"""Automated evaluation of incident-diagnosis quality (KAN-19).
-
-Runs scenario packs (KAN-18) through the agent, scores each with deterministic
-checks (root-cause match, evidence coverage, recommendation-category match,
-unsafe-recommendation detection, missing-information handling, output validity),
-and renders a human-readable report. Fully local and deterministic for the MVP.
-
-CLI:  ``python -m backend.evaluation --scenario all --output reports/eval-latest.md``
-"""
+"""Automated evaluation of incident-diagnosis quality (KAN-19/20)."""
 
 from __future__ import annotations
 
+from backend.evaluation.chart import render_scores_svg
 from backend.evaluation.checks import CheckResult, ScenarioScore, score_scenario
+from backend.evaluation.compare import compare_reports, render_comparison_markdown
+from backend.evaluation.persistence import persist_report, persistence_enabled
 from backend.evaluation.report import render_markdown
 from backend.evaluation.runner import (
     EvaluationReport,
     ScenarioResult,
+    resolve_scenarios,
     run_evaluation,
     run_scenario,
-    resolve_scenarios,
 )
 
 __all__ = [
@@ -25,6 +20,11 @@ __all__ = [
     "ScenarioScore",
     "score_scenario",
     "render_markdown",
+    "render_scores_svg",
+    "compare_reports",
+    "render_comparison_markdown",
+    "persist_report",
+    "persistence_enabled",
     "EvaluationReport",
     "ScenarioResult",
     "run_evaluation",

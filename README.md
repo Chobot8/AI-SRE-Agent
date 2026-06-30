@@ -233,7 +233,7 @@ Details on the CI pipeline and the local contributor workflow are in
 
 ---
 
-## Evaluating diagnosis quality (KAN-19)
+## Evaluating diagnosis quality (KAN-19/20)
 
 The evaluation runner replays the scenario packs (KAN-18) through the agent and
 scores each one with deterministic checks, then writes a Markdown report. It runs
@@ -241,34 +241,73 @@ fully locally — deterministic analysis + in-process RAG, no external systems a
 no API keys.
 
 ```bash
-# Score every scenario and write the report (default output path shown)
-python -m backend.evaluation --scenario all --output reports/eval-latest.md
+# Score every scenario; writes the report, JSON, and an SVG chart, and
+# persists the run to PostgreSQL when DATABASE_URL is set (KAN-20).
+python -m backend.evaluation --scenario all --output reports/eval-latest.md \
+  --json reports/eval-latest.json
 
-# A subset, plus raw JSON, and non-zero exit if anything fails (for CI)
-python -m backend.evaluation --scenario payment-error-spike,orders-db-saturation \
-  --json reports/eval-latest.json --strict
+# Run and compare against a committed baseline (adds a regression section)
+python -m backend.evaluation --baseline reports/eval-baseline.json
+
+# Compare two existing JSON reports with no agent run
+python -m backend.evaluation --compare reports/eval-baseline.json reports/eval-latest.json \
+  --output reports/eval-comparison.md
 
 python -m backend.evaluation --list   # list scenario slugs
 ```
 
-The report records run metadata (commit SHA, engine, provider/model, prompt
-version, retrieval backend), an aggregate pass rate and average score, and a
-per-scenario breakdown of every check. **Metrics:** root-cause match, evidence
-coverage, recommendation-category match, unsafe-recommendation detection,
-missing-information handling, output/schema validity, plus runtime and
-LLM/retrieval call counts. A scenario passes only if the output is valid (gate),
-no unsafe recommendation is made (gate), and the weighted quality score is ≥ 0.60;
-invalid agent output is counted as a failure with the error shown.
+![Diagnosis quality scores](reports/eval-scores.svg)
 
-Scoring is **fully deterministic** for the MVP (an LLM-as-judge can be added later
-as extra checks). The latest committed run is in
-[`reports/eval-latest.md`](reports/eval-latest.md). It honestly surfaces current
-gaps — e.g. the agent still proposes a production-impacting fix for the
-self-resolved `search-false-positive` alert (tracked as KAN-28).
+### Methodology
 
-The suite also runs `pytest tests/test_evaluation_runner.py`. The evaluation is an
-**advisory** CI step for now (non-blocking) and a manual command; gating CI on the
-score is deferred until the agent's quality stabilizes.
+Each scenario pack is replayed through the agent and scored with **deterministic**
+checks (no LLM-as-judge for the MVP — it can be added later as extra checks):
+
+- **Output / schema validity** *(gate)* — the diagnosis is structurally valid; an
+  agent exception or malformed result is counted as a failure with the error.
+- **Unsafe-recommendation detection** *(gate)* — flags auto-execution, a
+  production-impacting action without approval, or any production-impacting action
+  on a self-resolved (false-positive) alert.
+- **Root-cause match** — the top hypothesis reflects the expected category.
+- **Evidence coverage** — how many expected evidence signals the output reflects.
+- **Recommendation-category match** — the agent recommends the expected class of
+  action (rollback, tune_config, …).
+- **Missing-information handling** — for ambiguous/false-positive packs, the agent
+  acknowledges uncertainty rather than over-committing.
+
+A scenario **passes** only if both gates hold and the weighted quality score over
+the applicable checks is ≥ 0.60. The runner also records runtime and LLM/retrieval
+call counts and the run metadata (commit SHA, engine, provider/model, prompt
+version, retrieval backend).
+
+### Persistence, baseline & comparisons (KAN-20)
+
+When `DATABASE_URL` is set, each run is written to the `evaluation_runs` /
+`evaluation_results` tables (KAN-16) so progress and regressions can be tracked
+over time; without a database the run still completes locally (persistence is a
+no-op). A run can be compared to a baseline (`--baseline`) or two JSON reports can
+be diffed directly (`--compare`), producing aggregate deltas, a per-scenario table,
+a metric summary, and **regression notes**.
+
+Committed artifacts (answering the open question: reports live in **both** Git and
+PostgreSQL):
+
+- [`reports/eval-baseline.md`](reports/eval-baseline.md) /
+  [`.json`](reports/eval-baseline.json) — the documented baseline run.
+- [`reports/eval-latest.md`](reports/eval-latest.md) /
+  [`.json`](reports/eval-latest.json) — the most recent run.
+- [`reports/eval-comparison.md`](reports/eval-comparison.md) — baseline vs latest.
+- [`reports/eval-scores.svg`](reports/eval-scores.svg) — the chart above.
+
+Markdown reports + the SVG chart are the portfolio MVP; a live dashboard is a
+possible future step (not needed now). The reports honestly surface current gaps —
+e.g. the agent still proposes a production-impacting fix for the self-resolved
+`search-false-positive` alert (tracked as KAN-28).
+
+The suite also runs `pytest tests/test_evaluation_runner.py tests/test_eval_compare.py`
+(plus `tests/db/test_eval_persistence.py` when Postgres is available). The
+evaluation is an **advisory**, non-blocking CI step and a manual command; gating CI
+on the score is deferred until the agent's quality stabilizes.
 
 ---
 

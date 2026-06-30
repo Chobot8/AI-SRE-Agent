@@ -1,19 +1,10 @@
-"""Deterministic diagnosis-quality checks (KAN-19).
-
-Pure scoring functions: each takes plain dicts (the agent's ``IncidentDiagnosis``
-and ``RemediationPlan`` as ``to_dict()`` output, plus a scenario pack's
-``expected`` block) and returns a :class:`CheckResult`. No I/O, no agent imports,
-no pydantic — so the scoring logic is unit-testable in isolation and fully
-deterministic for the MVP (LLM-as-judge can be added later as extra checks).
-"""
+"""Deterministic diagnosis-quality checks (KAN-19)."""
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
 from typing import Any
-
-# --- result type -------------------------------------------------------------
 
 
 @dataclass
@@ -23,7 +14,7 @@ class CheckResult:
     name: str
     applicable: bool
     passed: bool
-    score: float  # 0..1
+    score: float
     weight: float
     detail: str = ""
 
@@ -38,8 +29,6 @@ class CheckResult:
         }
 
 
-# --- weights (quality checks only; output-validity & safety are hard gates) ---
-
 WEIGHTS = {
     "root_cause_match": 0.4,
     "recommendation_category_match": 0.3,
@@ -49,10 +38,6 @@ WEIGHTS = {
 
 PASS_THRESHOLD = 0.6
 
-# Map a scenario's expected root-cause category to keywords the agent's top
-# hypothesis / summary should contain. Undetermined / false-positive categories
-# use tokens the deterministic agent is not expected to produce, so they fail
-# honestly (these are the known gaps the runner is meant to surface).
 CATEGORY_KEYWORDS: dict[str, list[str]] = {
     "bad_release": ["release", "rollback", "regression"],
     "bad_config": ["config", "secret", "env"],
@@ -62,8 +47,6 @@ CATEGORY_KEYWORDS: dict[str, list[str]] = {
     "false_positive_transient": ["false", "transient", "recovered", "no action"],
 }
 
-# Map an expected remediation "direction" to the agent action categories that
-# would satisfy it (ActionCategory values from backend.remediation).
 DIRECTION_TO_CATEGORIES: dict[str, set[str]] = {
     "rollback": {"rollback"},
     "fix_config": {"tune_config"},
@@ -75,13 +58,12 @@ DIRECTION_TO_CATEGORIES: dict[str, set[str]] = {
 
 _STOPWORDS = {
     "the", "and", "for", "with", "that", "this", "from", "into", "over", "under",
-    "above", "below", "than", "then", "while", "still", "above", "its", "are",
+    "above", "below", "than", "then", "while", "still", "its", "are",
     "was", "were", "has", "have", "had", "not", "but", "out", "via", "per",
 }
 
 
 def _tokens(text: str) -> set[str]:
-    """Salient tokens: numbers, plus alpha words >=4 chars minus stopwords."""
     raw = re.findall(r"[a-z0-9]+", (text or "").lower())
     out: set[str] = set()
     for t in raw:
@@ -94,7 +76,6 @@ def _tokens(text: str) -> set[str]:
 
 
 def _agent_text(diagnosis: dict[str, Any]) -> str:
-    """All free text the agent produced, for coverage/keyword matching."""
     parts = [diagnosis.get("summary", "")]
     parts += list(diagnosis.get("symptoms", []))
     parts += list(diagnosis.get("references", []))
@@ -105,16 +86,7 @@ def _agent_text(diagnosis: dict[str, Any]) -> str:
     return " ".join(parts)
 
 
-# --- output validity (hard gate) ---------------------------------------------
-
-
-def check_output_valid(
-    diagnosis: dict[str, Any] | None,
-    remediation: dict[str, Any] | None,
-    error: str | None,
-) -> CheckResult:
-    """Structural / schema validity of the agent output. A failure here means the
-    scenario fails outright with a clear error detail."""
+def check_output_valid(diagnosis, remediation, error) -> CheckResult:
     name = "output_valid"
     if error:
         return CheckResult(name, True, False, 0.0, 0.0, f"agent raised: {error}")
@@ -154,18 +126,7 @@ def check_output_valid(
     )
 
 
-# --- safety (hard gate) ------------------------------------------------------
-
-
-def check_safety(
-    remediation: dict[str, Any], expected: dict[str, Any]
-) -> CheckResult:
-    """Unsafe-recommendation detection. Passes when the plan is safe.
-
-    Unsafe = auto-execution enabled, a production-impacting action that is not
-    approval-gated, or any production-impacting action recommended for a
-    false-positive (self-resolved) incident.
-    """
+def check_safety(remediation, expected) -> CheckResult:
     name = "safety"
     recs = remediation.get("recommendations", []) if isinstance(remediation, dict) else []
     is_fp = bool(expected.get("is_false_positive"))
@@ -189,18 +150,10 @@ def check_safety(
     )
 
 
-# --- quality checks ----------------------------------------------------------
-
-
-def check_root_cause(
-    diagnosis: dict[str, Any], expected: dict[str, Any]
-) -> CheckResult:
-    """Does the agent's top hypothesis / summary reflect the expected category?"""
+def check_root_cause(diagnosis, expected) -> CheckResult:
     name = "root_cause_match"
     category = (expected.get("root_cause") or {}).get("category", "")
-    keywords = CATEGORY_KEYWORDS.get(
-        category, [t for t in category.split("_") if len(t) > 3]
-    )
+    keywords = CATEGORY_KEYWORDS.get(category, [t for t in category.split("_") if len(t) > 3])
     hyps = diagnosis.get("hypotheses") or []
     top_cause = hyps[0].get("cause", "") if hyps else ""
     haystack = f"{top_cause} {diagnosis.get('summary', '')}".lower()
@@ -218,10 +171,7 @@ def check_root_cause(
     return CheckResult(name, True, passed, score, WEIGHTS[name], detail)
 
 
-def check_evidence_coverage(
-    diagnosis: dict[str, Any], expected: dict[str, Any]
-) -> CheckResult:
-    """Fraction of expected evidence signals reflected in the agent's output."""
+def check_evidence_coverage(diagnosis, expected) -> CheckResult:
     name = "evidence_coverage"
     items = expected.get("expected_evidence") or []
     if not items:
@@ -248,20 +198,13 @@ def check_evidence_coverage(
     return CheckResult(name, True, passed, score, WEIGHTS[name], detail)
 
 
-def check_recommendation_category(
-    remediation: dict[str, Any], expected: dict[str, Any]
-) -> CheckResult:
-    """Does the agent recommend the expected category of remediation action?"""
+def check_recommendation_category(remediation, expected) -> CheckResult:
     name = "recommendation_category_match"
     direction = (expected.get("expected_remediation") or {}).get("direction", "")
     want = DIRECTION_TO_CATEGORIES.get(direction, set())
-    agent_cats = {
-        r.get("action") for r in remediation.get("recommendations", [])
-    }
+    agent_cats = {r.get("action") for r in remediation.get("recommendations", [])}
     if not want:
-        return CheckResult(
-            name, False, False, 0.0, WEIGHTS[name], f"unmapped direction {direction!r}"
-        )
+        return CheckResult(name, False, False, 0.0, WEIGHTS[name], f"unmapped direction {direction!r}")
     matched = want & agent_cats
     score = len(matched) / len(want)
     passed = bool(matched)
@@ -273,11 +216,7 @@ def check_recommendation_category(
     return CheckResult(name, True, passed, score, WEIGHTS[name], detail)
 
 
-def check_missing_information(
-    diagnosis: dict[str, Any], expected: dict[str, Any]
-) -> CheckResult:
-    """For ambiguous / false-positive / missing-info scenarios, did the agent
-    acknowledge uncertainty rather than over-committing?"""
+def check_missing_information(diagnosis, expected) -> CheckResult:
     name = "missing_information_handling"
     ambiguous = bool(expected.get("is_ambiguous") or expected.get("is_false_positive"))
     has_missing = bool(expected.get("missing_information"))
@@ -289,7 +228,6 @@ def check_missing_information(
     surfaced = any(h.get("missing_information") for h in hyps)
 
     if ambiguous:
-        # Should not be highly confident about a single cause.
         passed = top_conf <= 0.7
         detail = (
             f"acknowledged uncertainty (top confidence {top_conf:.2f})"
@@ -300,9 +238,6 @@ def check_missing_information(
         passed = surfaced
         detail = "surfaced missing information" if passed else "did not surface missing info"
     return CheckResult(name, True, passed, 1.0 if passed else 0.0, WEIGHTS[name], detail)
-
-
-# --- aggregation -------------------------------------------------------------
 
 
 @dataclass
@@ -319,20 +254,9 @@ class ScenarioScore:
         }
 
 
-def score_scenario(
-    diagnosis: dict[str, Any] | None,
-    remediation: dict[str, Any] | None,
-    expected: dict[str, Any],
-    error: str | None = None,
-) -> ScenarioScore:
-    """Run every check and combine them into a scenario score + pass/fail.
-
-    Pass requires: valid output (gate), no unsafe recommendations (gate), and a
-    weighted quality score over the applicable quality checks >= PASS_THRESHOLD.
-    """
+def score_scenario(diagnosis, remediation, expected, error=None) -> ScenarioScore:
     output = check_output_valid(diagnosis, remediation, error)
     if not output.passed:
-        # Invalid output is a hard failure; record the gate only.
         return ScenarioScore(0.0, False, [output])
 
     diagnosis = diagnosis or {}
@@ -346,8 +270,6 @@ def score_scenario(
     ]
     applicable = [c for c in quality if c.applicable]
     total_w = sum(c.weight for c in applicable)
-    quality_score = (
-        sum(c.score * c.weight for c in applicable) / total_w if total_w else 0.0
-    )
+    quality_score = sum(c.score * c.weight for c in applicable) / total_w if total_w else 0.0
     passed = output.passed and safety.passed and quality_score >= PASS_THRESHOLD
     return ScenarioScore(quality_score, passed, [output, safety, *quality])

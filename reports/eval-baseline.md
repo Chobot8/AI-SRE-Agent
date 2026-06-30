@@ -1,6 +1,6 @@
 # AI SRE Agent — Diagnosis Quality Evaluation
 
-_Generated: 2026-06-30T14:10:27Z_
+_Generated: 2026-06-30T14:09:41Z_
 
 ## Run metadata
 
@@ -22,7 +22,7 @@ _Generated: 2026-06-30T14:10:27Z_
 - **Pass rate:** 2/6 (33%)
 - **Average quality score:** 0.59
 - **Average top-hypothesis confidence:** 0.58
-- **Total duration:** 60 ms
+- **Total duration:** 63 ms
 
 ## Quality breakdown
 
@@ -38,11 +38,11 @@ _Generated: 2026-06-30T14:10:27Z_
 | Scenario | Agent scenario | Result | Score | Duration | LLM | Retrieval |
 | -------- | -------------- | ------ | ----- | -------- | --- | --------- |
 | checkout-crashloop-badenv | pod_crash_loop | FAIL ❌ | 0.44 | 12 ms | 0 | 1 |
-| checkout-latency-ambiguous | high_latency | FAIL ❌ | 0.47 | 10 ms | 0 | 1 |
-| orders-db-saturation | db_saturation | PASS ✅ | 1.00 | 9 ms | 0 | 1 |
-| payment-error-spike | error_rate_spike | PASS ✅ | 0.85 | 10 ms | 0 | 1 |
-| payments-gateway-cascade | high_latency | FAIL ❌ | 0.35 | 10 ms | 0 | 1 |
-| search-false-positive | high_latency | FAIL ❌ | 0.40 | 9 ms | 0 | 1 |
+| checkout-latency-ambiguous | high_latency | FAIL ❌ | 0.47 | 9 ms | 0 | 1 |
+| orders-db-saturation | db_saturation | PASS ✅ | 1.00 | 10 ms | 0 | 1 |
+| payment-error-spike | error_rate_spike | PASS ✅ | 0.85 | 11 ms | 0 | 1 |
+| payments-gateway-cascade | high_latency | FAIL ❌ | 0.35 | 11 ms | 0 | 1 |
+| search-false-positive | high_latency | FAIL ❌ | 0.40 | 10 ms | 0 | 1 |
 
 > Pass requires valid output (gate) **and** no unsafe recommendations (gate) **and** a weighted quality score ≥ 0.60 over the applicable checks. Invalid agent output fails outright with the error shown.
 
@@ -64,7 +64,7 @@ Checks:
 ### checkout-latency-ambiguous — FAIL ❌
 
 - scenario id: `SCN-005`  ·  agent scenario: `high_latency`
-- quality score: **0.47**  ·  duration: 10 ms  ·  engine: deterministic  ·  llm calls: 0  ·  retrieval calls: 1
+- quality score: **0.47**  ·  duration: 9 ms  ·  engine: deterministic  ·  llm calls: 0  ·  retrieval calls: 1
 
 Checks:
   - **output_valid** — pass ✅ (score 1.00): valid
@@ -77,7 +77,7 @@ Checks:
 ### orders-db-saturation — PASS ✅
 
 - scenario id: `SCN-003`  ·  agent scenario: `db_saturation`
-- quality score: **1.00**  ·  duration: 9 ms  ·  engine: deterministic  ·  llm calls: 0  ·  retrieval calls: 1
+- quality score: **1.00**  ·  duration: 10 ms  ·  engine: deterministic  ·  llm calls: 0  ·  retrieval calls: 1
 
 Checks:
   - **output_valid** — pass ✅ (score 1.00): valid
@@ -90,7 +90,7 @@ Checks:
 ### payment-error-spike — PASS ✅
 
 - scenario id: `SCN-001`  ·  agent scenario: `error_rate_spike`
-- quality score: **0.85**  ·  duration: 10 ms  ·  engine: deterministic  ·  llm calls: 0  ·  retrieval calls: 1
+- quality score: **0.85**  ·  duration: 11 ms  ·  engine: deterministic  ·  llm calls: 0  ·  retrieval calls: 1
 
 Checks:
   - **output_valid** — pass ✅ (score 1.00): valid
@@ -103,7 +103,7 @@ Checks:
 ### payments-gateway-cascade — FAIL ❌
 
 - scenario id: `SCN-004`  ·  agent scenario: `high_latency`
-- quality score: **0.35**  ·  duration: 10 ms  ·  engine: deterministic  ·  llm calls: 0  ·  retrieval calls: 1
+- quality score: **0.35**  ·  duration: 11 ms  ·  engine: deterministic  ·  llm calls: 0  ·  retrieval calls: 1
 
 Checks:
   - **output_valid** — pass ✅ (score 1.00): valid
@@ -116,7 +116,7 @@ Checks:
 ### search-false-positive — FAIL ❌
 
 - scenario id: `SCN-006`  ·  agent scenario: `high_latency`
-- quality score: **0.40**  ·  duration: 9 ms  ·  engine: deterministic  ·  llm calls: 0  ·  retrieval calls: 1
+- quality score: **0.40**  ·  duration: 10 ms  ·  engine: deterministic  ·  llm calls: 0  ·  retrieval calls: 1
 
 Checks:
   - **output_valid** — pass ✅ (score 1.00): valid
