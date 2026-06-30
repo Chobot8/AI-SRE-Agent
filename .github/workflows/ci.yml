@@ -65,6 +65,13 @@ jobs:
       - name: Unit tests + schema checks (pytest)
         run: pytest -q
 
+      # Advisory: runs the diagnosis-quality evaluation and surfaces the report
+      # without gating the pipeline (KAN-19). Gating on the score is deferred
+      # until the agent's quality stabilizes.
+      - name: Diagnosis-quality evaluation (advisory)
+        run: python -m backend.evaluation --scenario all --output reports/eval-latest.md
+        continue-on-error: true
+
   docker-build:
     name: Build container images
     runs-on: ubuntu-latest
