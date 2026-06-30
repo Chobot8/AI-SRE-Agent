@@ -215,6 +215,11 @@ curl -s -X POST http://localhost:8000/incidents/replay/db_saturation | jq
   `expected.yaml`), including ambiguous, multi-cause, and false-positive cases.
   Discover/validate/replay them with `python -m backend.scenarios {list,validate,show,replay}`;
   see `scenarios/README.md`.
+- **Diagnosis-quality evaluation (KAN-19)** — an automated runner scores the
+  agent against the scenario packs with deterministic checks (root-cause match,
+  evidence coverage, recommendation-category match, unsafe-recommendation
+  detection, missing-information handling, output validity) and writes a
+  human-readable report. See the next section.
 - **CI (KAN-11)** — every PR and push to `main` runs format, lint, tests, schema
   checks, and a container image build + `/health` smoke test (badge above).
 - **Observability (KAN-12)** — correlation IDs, structured logs, `/metrics`.
@@ -225,6 +230,45 @@ curl -s -X POST http://localhost:8000/incidents/replay/db_saturation | jq
 
 Details on the CI pipeline and the local contributor workflow are in
 [CONTRIBUTING / CI](#continuous-integration) below.
+
+---
+
+## Evaluating diagnosis quality (KAN-19)
+
+The evaluation runner replays the scenario packs (KAN-18) through the agent and
+scores each one with deterministic checks, then writes a Markdown report. It runs
+fully locally — deterministic analysis + in-process RAG, no external systems and
+no API keys.
+
+```bash
+# Score every scenario and write the report (default output path shown)
+python -m backend.evaluation --scenario all --output reports/eval-latest.md
+
+# A subset, plus raw JSON, and non-zero exit if anything fails (for CI)
+python -m backend.evaluation --scenario payment-error-spike,orders-db-saturation \
+  --json reports/eval-latest.json --strict
+
+python -m backend.evaluation --list   # list scenario slugs
+```
+
+The report records run metadata (commit SHA, engine, provider/model, prompt
+version, retrieval backend), an aggregate pass rate and average score, and a
+per-scenario breakdown of every check. **Metrics:** root-cause match, evidence
+coverage, recommendation-category match, unsafe-recommendation detection,
+missing-information handling, output/schema validity, plus runtime and
+LLM/retrieval call counts. A scenario passes only if the output is valid (gate),
+no unsafe recommendation is made (gate), and the weighted quality score is ≥ 0.60;
+invalid agent output is counted as a failure with the error shown.
+
+Scoring is **fully deterministic** for the MVP (an LLM-as-judge can be added later
+as extra checks). The latest committed run is in
+[`reports/eval-latest.md`](reports/eval-latest.md). It honestly surfaces current
+gaps — e.g. the agent still proposes a production-impacting fix for the
+self-resolved `search-false-positive` alert (tracked as KAN-28).
+
+The suite also runs `pytest tests/test_evaluation_runner.py`. The evaluation is an
+**advisory** CI step for now (non-blocking) and a manual command; gating CI on the
+score is deferred until the agent's quality stabilizes.
 
 ---
 
