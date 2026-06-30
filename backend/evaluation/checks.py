@@ -204,7 +204,9 @@ def check_recommendation_category(remediation, expected) -> CheckResult:
     want = DIRECTION_TO_CATEGORIES.get(direction, set())
     agent_cats = {r.get("action") for r in remediation.get("recommendations", [])}
     if not want:
-        return CheckResult(name, False, False, 0.0, WEIGHTS[name], f"unmapped direction {direction!r}")
+        return CheckResult(
+            name, False, False, 0.0, WEIGHTS[name], f"unmapped direction {direction!r}"
+        )
     matched = want & agent_cats
     score = len(matched) / len(want)
     passed = bool(matched)
