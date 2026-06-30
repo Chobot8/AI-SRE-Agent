@@ -1,0 +1,11 @@
+{
+  "service": "payments-api",
+  "status": "degraded",
+  "version": "v2.4.1",
+  "replicas": { "desired": 6, "ready": 6 },
+  "dependencies": [
+    { "name": "payments-gateway", "type": "external_api", "status": "timing_out", "latency_ms": 3000, "error_rate": 0.63, "notes": "Vendor reports elevated processing latency in eu-central. Primary trigger." },
+    { "name": "orders-db", "type": "database", "status": "healthy", "latency_ms": 8, "error_rate": 0.0 },
+    { "name": "checkout-api", "type": "internal_service", "status": "degraded", "latency_ms": 4200, "error_rate": 0.4, "notes": "Cascade: blocked waiting on payments-api." }
+  ]
+}

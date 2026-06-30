@@ -1,0 +1,11 @@
+{
+  "service": "payments-api",
+  "status": "degraded",
+  "version": "v2.4.0",
+  "replicas": { "desired": 6, "ready": 6 },
+  "dependencies": [
+    { "name": "orders-db", "type": "database", "status": "healthy", "latency_ms": 7, "error_rate": 0.0 },
+    { "name": "payments-gateway", "type": "external_api", "status": "healthy", "latency_ms": 180, "error_rate": 0.0 },
+    { "name": "ledger-service", "type": "internal_service", "status": "degraded", "latency_ms": 220, "error_rate": 0.03, "notes": "Secondary degradation from payments-api retries, not the root cause." }
+  ]
+}

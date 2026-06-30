@@ -1,0 +1,35 @@
+{
+  "metrics": [
+    {
+      "name": "http_5xx_ratio",
+      "unit": "ratio",
+      "description": "Fraction of responses that are 5xx",
+      "points": [
+        { "t": "2026-06-25T14:20:00Z", "value": 0.004 },
+        { "t": "2026-06-25T14:25:00Z", "value": 0.006 },
+        { "t": "2026-06-25T14:30:00Z", "value": 0.092 },
+        { "t": "2026-06-25T14:35:00Z", "value": 0.141 }
+      ]
+    },
+    {
+      "name": "deploy_marker",
+      "unit": "bool",
+      "description": "1 at the timestamp a new version was rolled out",
+      "points": [
+        { "t": "2026-06-25T14:20:00Z", "value": 0 },
+        { "t": "2026-06-25T14:28:00Z", "value": 1 },
+        { "t": "2026-06-25T14:35:00Z", "value": 0 }
+      ]
+    },
+    {
+      "name": "request_rate",
+      "unit": "req/s",
+      "description": "Incoming request rate (steady, rules out a traffic surge)",
+      "points": [
+        { "t": "2026-06-25T14:20:00Z", "value": 420 },
+        { "t": "2026-06-25T14:30:00Z", "value": 431 },
+        { "t": "2026-06-25T14:35:00Z", "value": 425 }
+      ]
+    }
+  ]
+}

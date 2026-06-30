@@ -1,0 +1,15 @@
+{
+  "id": "SCN-004",
+  "service": "payments-api",
+  "environment": "production",
+  "source": "grafana",
+  "severity": "critical",
+  "summary": "payments-api p99 latency 4500ms and rising; checkout failures cascading",
+  "started_at": "2026-06-25T20:14:00Z",
+  "labels": {
+    "service": "payments-api",
+    "alertname": "HighLatencyCascade",
+    "team": "payments",
+    "upstream": "payments-gateway"
+  }
+}

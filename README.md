@@ -210,6 +210,11 @@ curl -s -X POST http://localhost:8000/incidents/replay/db_saturation | jq
   `sample-data/evaluation/baseline.json` checks expected root cause, evidence,
   retrieval quality, and diagnosis completeness over all five scenarios:
   `pytest tests/test_evaluation.py`.
+- **Scenario packs (KAN-18)** — richer, structured incident scenarios under
+  `scenarios/` (alert, logs, metrics, service health, runbook, and machine-readable
+  `expected.yaml`), including ambiguous, multi-cause, and false-positive cases.
+  Discover/validate/replay them with `python -m backend.scenarios {list,validate,show,replay}`;
+  see `scenarios/README.md`.
 - **CI (KAN-11)** — every PR and push to `main` runs format, lint, tests, schema
   checks, and a container image build + `/health` smoke test (badge above).
 - **Observability (KAN-12)** — correlation IDs, structured logs, `/metrics`.
@@ -325,6 +330,7 @@ AI-SRE-Agent/
 ├── ui/app.py              # KAN-8 — Streamlit incident-triage UI
 ├── knowledge/runbooks/    # KAN-4 — source runbooks (one per scenario)
 ├── sample-data/           # 5 incident scenarios + JSON schema + eval baseline
+├── scenarios/             # KAN-18 — richer scenario packs (folders) + loader/CLI
 ├── infra/                 # KAN-10/11 — Dockerfiles, docker-compose; db/schema.sql (KAN-15)
 ├── migrations/            # KAN-16 — Alembic env + versions (initial schema)
 ├── alembic.ini            # KAN-16 — Alembic config (URL from settings, no secrets)

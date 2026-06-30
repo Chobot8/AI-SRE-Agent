@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "scenarios/schema/service_health.schema.json",
+  "title": "ScenarioServiceHealth",
+  "description": "Service health and dependency status snapshot (service_health.json).",
+  "type": "object",
+  "required": ["service", "status", "dependencies"],
+  "additionalProperties": false,
+  "properties": {
+    "service": { "type": "string" },
+    "status": { "type": "string", "enum": ["healthy", "degraded", "down"] },
+    "version": { "type": "string" },
+    "replicas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "desired": { "type": "integer" },
+        "ready": { "type": "integer" }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["database", "cache", "queue", "external_api", "internal_service", "object_store"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["healthy", "degraded", "timing_out", "unavailable"]
+          },
+          "latency_ms": { "type": "number" },
+          "error_rate": { "type": "number" },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}

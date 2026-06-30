@@ -1,0 +1,10 @@
+{
+  "service": "search-api",
+  "status": "healthy",
+  "version": "v4.2.0",
+  "replicas": { "desired": 4, "ready": 4 },
+  "dependencies": [
+    { "name": "search-index", "type": "object_store", "status": "healthy", "latency_ms": 12, "error_rate": 0.0 },
+    { "name": "query-cache", "type": "cache", "status": "healthy", "latency_ms": 1, "error_rate": 0.0, "notes": "Briefly cold after a routine restart; warmed back up on its own." }
+  ]
+}

@@ -1,0 +1,33 @@
+id: SCN-003
+slug: orders-db-saturation
+title: orders-api latency from orders-db lock contention and pool exhaustion
+domain: ecommerce
+agent_scenario: db_saturation
+is_ambiguous: false
+is_multi_cause: false
+is_false_positive: false
+root_cause:
+  summary: >-
+    A long-running 'nightly-reconcile' batch transaction (pid 4471) holds locks on
+    the orders table, causing lock waits and exhausting the orders-db connection
+    pool. orders-api requests queue and time out. Terminating the blocking
+    transaction releases the locks and relieves saturation.
+  category: lock_contention
+  confidence: high
+expected_evidence:
+  - db_active_connections pinned at 100/100 (pool exhausted) with requests queued
+  - db_lock_wait_seconds rising to 6.4s as orders-api p99 climbs to 2100ms
+  - Log shows long-running batch transaction pid 4471 holding locks on table orders
+  - Lock wait timeout errors on UPDATE orders queries
+expected_remediation:
+  direction: relieve_contention
+  actions:
+    - Identify and terminate the blocking transaction (pid 4471) to release locks
+    - Coordinate with the nightly-reconcile job owner before killing; expect a retry
+    - Add statement/lock timeouts so a single transaction cannot hold locks indefinitely
+  approval_required: true
+  production_impacting: true
+alternative_hypotheses: []
+missing_information: []
+runbook_references:
+  - db_saturation.md

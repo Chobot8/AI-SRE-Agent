@@ -1,0 +1,44 @@
+{
+  "metrics": [
+    {
+      "name": "gateway_call_latency_ms",
+      "unit": "ms",
+      "description": "Latency of outbound calls to the external payments-gateway",
+      "points": [
+        { "t": "2026-06-25T20:08:00Z", "value": 190 },
+        { "t": "2026-06-25T20:11:00Z", "value": 1400 },
+        { "t": "2026-06-25T20:14:00Z", "value": 3000 }
+      ]
+    },
+    {
+      "name": "gateway_timeout_ratio",
+      "unit": "ratio",
+      "description": "Fraction of gateway calls that hit the 3s timeout",
+      "points": [
+        { "t": "2026-06-25T20:08:00Z", "value": 0.00 },
+        { "t": "2026-06-25T20:11:00Z", "value": 0.21 },
+        { "t": "2026-06-25T20:14:00Z", "value": 0.63 }
+      ]
+    },
+    {
+      "name": "payments_api_retry_rate",
+      "unit": "req/s",
+      "description": "Internal retry rate to the gateway (amplification)",
+      "points": [
+        { "t": "2026-06-25T20:08:00Z", "value": 5 },
+        { "t": "2026-06-25T20:11:00Z", "value": 140 },
+        { "t": "2026-06-25T20:14:00Z", "value": 410 }
+      ]
+    },
+    {
+      "name": "payments_api_threadpool_utilization",
+      "unit": "ratio",
+      "description": "Worker thread-pool utilization (saturates as calls block on the gateway)",
+      "points": [
+        { "t": "2026-06-25T20:08:00Z", "value": 0.34 },
+        { "t": "2026-06-25T20:11:00Z", "value": 0.88 },
+        { "t": "2026-06-25T20:14:00Z", "value": 0.99 }
+      ]
+    }
+  ]
+}

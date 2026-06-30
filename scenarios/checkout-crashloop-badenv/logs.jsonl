@@ -1,0 +1,5 @@
+{"t": "2026-06-25T09:00:01Z", "level": "INFO", "service": "checkout-api", "message": "starting checkout-api v1.9.0 (config profile=production)"}
+{"t": "2026-06-25T09:00:01Z", "level": "FATAL", "service": "checkout-api", "message": "config validation failed: required env PAYMENTS_GATEWAY_API_KEY is empty"}
+{"t": "2026-06-25T09:00:01Z", "level": "ERROR", "service": "checkout-api", "message": "panic during init: cannot construct PaymentsClient without API key; exiting 1"}
+{"t": "2026-06-25T09:00:31Z", "level": "WARN", "service": "kubelet", "message": "Back-off restarting failed container checkout-api in pod checkout-api-7c9f (reason: CrashLoopBackOff)"}
+{"t": "2026-06-25T09:02:00Z", "level": "ERROR", "service": "checkout-api", "message": "config validation failed: required env PAYMENTS_GATEWAY_API_KEY is empty"}

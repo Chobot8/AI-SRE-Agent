@@ -1,0 +1,41 @@
+id: SCN-005
+slug: checkout-latency-ambiguous
+title: checkout-api latency with two plausible bottlenecks and no tracing
+domain: ecommerce
+agent_scenario: high_latency
+is_ambiguous: true
+is_multi_cause: false
+is_false_positive: false
+root_cause:
+  summary: >-
+    checkout-api p95 is over SLO, but the cause is genuinely ambiguous: both the
+    orders-db query path and the inventory-api call are elevated by a similar
+    factor, and distributed tracing is disabled, so the latency budget cannot be
+    attributed. The correct first move is to gather the disambiguating signal, not
+    to guess.
+  category: undetermined_latency
+  confidence: low
+expected_evidence:
+  - checkout-api p95 over SLO (1300ms vs 600ms) with flat request rate
+  - orders-db query p95 and inventory-api call p95 BOTH up ~4x - neither dominates
+  - Log notes distributed tracing sampling is disabled (cannot attribute spans)
+expected_remediation:
+  direction: investigate
+  actions:
+    - Re-enable distributed tracing sampling briefly to attribute the latency budget per span
+    - EXPLAIN the orders WHERE user_id query to confirm or rule out a missing index
+    - Check inventory-api's own latency independently
+  approval_required: false
+  production_impacting: false
+alternative_hypotheses:
+  - cause: Unindexed orders-db query on the checkout hot path
+    why_plausible: Repeated slow-query warnings on SELECT ... WHERE user_id with query p95 up ~4x.
+    how_to_disambiguate: EXPLAIN the query and confirm a missing covering index; a trace would show DB time dominating the request.
+  - cause: Slow inventory-api dependency
+    why_plausible: inventory-api call p95 is also up ~4x and is on every checkout.
+    how_to_disambiguate: A trace would show inventory-api span time dominating; check inventory-api's own metrics for an internal cause.
+missing_information:
+  - Distributed tracing / per-span latency attribution (sampling currently disabled)
+  - EXPLAIN plan for the suspect orders query
+runbook_references:
+  - high_latency.md

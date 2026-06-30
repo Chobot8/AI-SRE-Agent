@@ -1,0 +1,16 @@
+{
+  "id": "SCN-002",
+  "service": "checkout-api",
+  "environment": "production",
+  "source": "alertmanager",
+  "severity": "critical",
+  "summary": "checkout-api pods in CrashLoopBackOff (0/5 ready) for 6m",
+  "started_at": "2026-06-25T09:02:00Z",
+  "labels": {
+    "service": "checkout-api",
+    "alertname": "KubePodCrashLooping",
+    "namespace": "storefront",
+    "team": "checkout",
+    "deployment": "checkout-api-v1.9.0"
+  }
+}

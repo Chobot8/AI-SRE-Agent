@@ -1,0 +1,36 @@
+id: SCN-002
+slug: checkout-crashloop-badenv
+title: checkout-api CrashLoopBackOff from a missing payments secret
+domain: ecommerce
+agent_scenario: pod_crash_loop
+is_ambiguous: false
+is_multi_cause: false
+is_false_positive: false
+root_cause:
+  summary: >-
+    The v1.9.0 rollout dropped the PAYMENTS_GATEWAY_API_KEY secret, so checkout-api
+    fails config validation and panics during init, restarting in a
+    CrashLoopBackOff. Restoring the secret (or rolling back the manifest change)
+    and redeploying recovers the pods.
+  category: bad_config
+  confidence: high
+expected_evidence:
+  - FATAL config validation log on every start - required env PAYMENTS_GATEWAY_API_KEY is empty
+  - pod_restarts_total climbing while containers_ready falls to 0/5
+  - container_memory_working_set_ratio ~0.17, well below the limit (rules out OOMKilled)
+  - All downstream dependencies report healthy
+expected_remediation:
+  direction: fix_config
+  actions:
+    - Restore the PAYMENTS_GATEWAY_API_KEY secret in the storefront namespace (or roll back the v1.9.0 manifest change that removed it)
+    - Redeploy checkout-api and confirm pods reach Ready
+    - Add a pre-deploy check that required secrets are present and non-empty
+  approval_required: true
+  production_impacting: true
+alternative_hypotheses:
+  - cause: OOMKilled crash loop
+    why_plausible: CrashLoopBackOff is also the classic symptom of a container exceeding its memory limit.
+    how_to_disambiguate: Memory working set is ~17% of the limit and the termination reason is a non-zero exit from a config error, not OOMKilled.
+missing_information: []
+runbook_references:
+  - pod_crash_loop.md

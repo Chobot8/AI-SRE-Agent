@@ -1,0 +1,35 @@
+{
+  "metrics": [
+    {
+      "name": "db_active_connections",
+      "unit": "count",
+      "description": "Active connections against the 100-connection pool max",
+      "points": [
+        { "t": "2026-06-25T19:40:00Z", "value": 38 },
+        { "t": "2026-06-25T19:45:00Z", "value": 86 },
+        { "t": "2026-06-25T19:48:00Z", "value": 100 },
+        { "t": "2026-06-25T19:50:00Z", "value": 100 }
+      ]
+    },
+    {
+      "name": "db_lock_wait_seconds",
+      "unit": "s",
+      "description": "Time queries spend waiting on row locks",
+      "points": [
+        { "t": "2026-06-25T19:40:00Z", "value": 0.01 },
+        { "t": "2026-06-25T19:45:00Z", "value": 1.8 },
+        { "t": "2026-06-25T19:48:00Z", "value": 6.4 }
+      ]
+    },
+    {
+      "name": "orders_api_p99_latency_ms",
+      "unit": "ms",
+      "description": "End-user p99 latency for orders-api",
+      "points": [
+        { "t": "2026-06-25T19:40:00Z", "value": 290 },
+        { "t": "2026-06-25T19:45:00Z", "value": 980 },
+        { "t": "2026-06-25T19:48:00Z", "value": 2100 }
+      ]
+    }
+  ]
+}

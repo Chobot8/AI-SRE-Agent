@@ -1,0 +1,14 @@
+{
+  "id": "SCN-005",
+  "service": "checkout-api",
+  "environment": "production",
+  "source": "prometheus",
+  "severity": "warning",
+  "summary": "checkout-api p95 latency 1300ms (SLO 600ms) for 12m - cause unclear",
+  "started_at": "2026-06-25T11:05:00Z",
+  "labels": {
+    "service": "checkout-api",
+    "alertname": "HighLatency",
+    "team": "checkout"
+  }
+}

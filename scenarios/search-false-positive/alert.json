@@ -1,0 +1,15 @@
+{
+  "id": "SCN-006",
+  "service": "search-api",
+  "environment": "production",
+  "source": "prometheus",
+  "severity": "warning",
+  "summary": "search-api p99 latency 850ms (SLO 500ms) - single 1-minute breach",
+  "started_at": "2026-06-25T03:11:00Z",
+  "labels": {
+    "service": "search-api",
+    "alertname": "HighLatency",
+    "team": "discovery",
+    "for": "1m"
+  }
+}

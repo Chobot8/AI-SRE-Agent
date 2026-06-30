@@ -1,0 +1,15 @@
+{
+  "id": "SCN-003",
+  "service": "orders-api",
+  "environment": "production",
+  "source": "prometheus",
+  "severity": "critical",
+  "summary": "orders-api p99 latency 2100ms (SLO 400ms) with orders-db connection pool saturated",
+  "started_at": "2026-06-25T19:48:00Z",
+  "labels": {
+    "service": "orders-api",
+    "alertname": "DatabaseSaturation",
+    "team": "orders",
+    "datastore": "orders-db"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "scenarios/schema/expected.schema.json",
+  "title": "ScenarioExpected",
+  "description": "Machine-readable ground truth for a scenario pack (expected.yaml).",
+  "type": "object",
+  "required": [
+    "id",
+    "slug",
+    "title",
+    "agent_scenario",
+    "root_cause",
+    "expected_evidence",
+    "expected_remediation"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "slug": { "type": "string" },
+    "title": { "type": "string" },
+    "domain": { "type": "string" },
+    "agent_scenario": {
+      "type": "string",
+      "description": "Maps the pack to one of the agent's reasoning scenarios.",
+      "enum": [
+        "high_latency",
+        "error_rate_spike",
+        "pod_crash_loop",
+        "queue_backlog",
+        "db_saturation"
+      ]
+    },
+    "is_ambiguous": { "type": "boolean" },
+    "is_multi_cause": { "type": "boolean" },
+    "is_false_positive": { "type": "boolean" },
+    "root_cause": {
+      "type": "object",
+      "required": ["summary"],
+      "additionalProperties": false,
+      "properties": {
+        "summary": { "type": "string" },
+        "category": { "type": "string" },
+        "confidence": { "type": "string", "enum": ["low", "medium", "high"] }
+      }
+    },
+    "expected_evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "expected_remediation": {
+      "type": "object",
+      "required": ["direction"],
+      "additionalProperties": false,
+      "properties": {
+        "direction": { "type": "string" },
+        "actions": { "type": "array", "items": { "type": "string" } },
+        "approval_required": { "type": "boolean" },
+        "production_impacting": { "type": "boolean" }
+      }
+    },
+    "alternative_hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["cause"],
+        "additionalProperties": false,
+        "properties": {
+          "cause": { "type": "string" },
+          "why_plausible": { "type": "string" },
+          "how_to_disambiguate": { "type": "string" }
+        }
+      }
+    },
+    "missing_information": { "type": "array", "items": { "type": "string" } },
+    "runbook_references": { "type": "array", "items": { "type": "string" } }
+  }
+}
