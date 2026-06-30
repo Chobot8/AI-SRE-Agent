@@ -1,0 +1,11 @@
+{
+  "service": "checkout-api",
+  "status": "down",
+  "version": "v1.9.0",
+  "replicas": { "desired": 5, "ready": 0 },
+  "dependencies": [
+    { "name": "orders-db", "type": "database", "status": "healthy", "latency_ms": 6, "error_rate": 0.0 },
+    { "name": "payments-gateway", "type": "external_api", "status": "healthy", "latency_ms": 175, "error_rate": 0.0 },
+    { "name": "cart-cache", "type": "cache", "status": "healthy", "latency_ms": 1, "error_rate": 0.0 }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "metrics": [
+    {
+      "name": "search_api_p99_latency_ms",
+      "unit": "ms",
+      "description": "p99 latency - one spike that recovers on its own",
+      "points": [
+        { "t": "2026-06-25T03:08:00Z", "value": 240 },
+        { "t": "2026-06-25T03:11:00Z", "value": 850 },
+        { "t": "2026-06-25T03:13:00Z", "value": 300 },
+        { "t": "2026-06-25T03:16:00Z", "value": 235 }
+      ]
+    },
+    {
+      "name": "jvm_gc_pause_ms",
+      "unit": "ms",
+      "description": "Garbage-collection pause time (single major GC after a rolling restart)",
+      "points": [
+        { "t": "2026-06-25T03:08:00Z", "value": 15 },
+        { "t": "2026-06-25T03:11:00Z", "value": 610 },
+        { "t": "2026-06-25T03:13:00Z", "value": 18 }
+      ]
+    },
+    {
+      "name": "cache_hit_ratio",
+      "unit": "ratio",
+      "description": "Query cache hit ratio (dips during cold start, then warms back up)",
+      "points": [
+        { "t": "2026-06-25T03:08:00Z", "value": 0.94 },
+        { "t": "2026-06-25T03:11:00Z", "value": 0.41 },
+        { "t": "2026-06-25T03:13:00Z", "value": 0.88 },
+        { "t": "2026-06-25T03:16:00Z", "value": 0.95 }
+      ]
+    }
+  ]
+}

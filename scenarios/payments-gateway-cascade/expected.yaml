@@ -1,0 +1,38 @@
+id: SCN-004
+slug: payments-gateway-cascade
+title: External payments-gateway timeout cascading through payments-api to checkout
+domain: ecommerce
+agent_scenario: high_latency
+is_ambiguous: false
+is_multi_cause: true
+is_false_positive: false
+root_cause:
+  summary: >-
+    The external payments-gateway is timing out (vendor-side latency in eu-central),
+    which is the trigger. payments-api makes it worse by retrying aggressively with
+    no circuit breaker, saturating its worker thread pool and cascading failures into
+    checkout-api. Both the external outage and the retry amplification must be addressed.
+  category: external_dependency_timeout
+  confidence: medium
+expected_evidence:
+  - gateway_call_latency_ms and gateway_timeout_ratio spike first (0% to 63% timeouts)
+  - payments_api_retry_rate jumps 5 to 410 req/s and threadpool utilization hits 0.99
+  - checkout-api errors are downstream of payments-api timeouts (cascade ordering)
+  - Vendor status page confirms elevated processing latency in eu-central
+expected_remediation:
+  direction: protect_and_failover
+  actions:
+    - Trip a circuit breaker / shed load to payments-gateway so retries stop saturating the worker pool
+    - Fail fast - shorten the gateway timeout and cap retries; serve a degraded/fallback path
+    - Engage the payments-gateway vendor and track their incident
+    - Follow up by adding circuit breaking and backoff so a vendor blip cannot cascade
+  approval_required: true
+  production_impacting: true
+alternative_hypotheses:
+  - cause: payments-api retry storm / missing circuit breaker (contributing cause)
+    why_plausible: Retry rate and thread-pool saturation amplify the outage and would degrade the service even for a brief gateway blip.
+    how_to_disambiguate: The gateway latency/timeout ratio rises before the retry surge, so the vendor timeout is the trigger and the retry behavior is an amplifier - both are real and fixable.
+missing_information:
+  - Per-endpoint breakdown to confirm only gateway-dependent paths are affected
+runbook_references:
+  - high_latency.md

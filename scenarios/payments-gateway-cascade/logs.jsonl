@@ -1,0 +1,5 @@
+{"t": "2026-06-25T20:10:40Z", "level": "WARN", "service": "payments-api", "message": "gateway call to payments-gateway exceeded 3000ms; retrying (attempt 1)"}
+{"t": "2026-06-25T20:11:20Z", "level": "ERROR", "service": "payments-api", "message": "payments-gateway call failed: deadline exceeded after 3 retries"}
+{"t": "2026-06-25T20:12:05Z", "level": "WARN", "service": "payments-api", "message": "worker thread pool 99% busy; 220 requests blocked on gateway calls"}
+{"t": "2026-06-25T20:13:10Z", "level": "ERROR", "service": "checkout-api", "message": "payments-api call timed out; cannot complete checkout for cart 88213"}
+{"t": "2026-06-25T20:14:02Z", "level": "INFO", "service": "payments-gateway-status", "message": "vendor status page: elevated processing latency in eu-central region (investigating)"}

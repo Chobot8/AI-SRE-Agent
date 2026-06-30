@@ -1,0 +1,5 @@
+{"t": "2026-06-25T10:59:14Z", "level": "WARN", "service": "checkout-api", "message": "slow query 210ms: SELECT * FROM orders WHERE user_id=? (no covering index?)"}
+{"t": "2026-06-25T11:01:02Z", "level": "WARN", "service": "checkout-api", "message": "inventory-api call took 280ms (p95 budget 120ms)"}
+{"t": "2026-06-25T11:02:40Z", "level": "INFO", "service": "checkout-api", "message": "distributed tracing sampling currently disabled for checkout-api (cost control)"}
+{"t": "2026-06-25T11:03:55Z", "level": "WARN", "service": "checkout-api", "message": "slow query 230ms: SELECT * FROM orders WHERE user_id=?"}
+{"t": "2026-06-25T11:04:30Z", "level": "WARN", "service": "checkout-api", "message": "inventory-api call took 300ms (p95 budget 120ms)"}

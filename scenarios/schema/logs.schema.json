@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "scenarios/schema/logs.schema.json",
+  "title": "ScenarioLogEntry",
+  "description": "Schema for a single line of logs.jsonl (one JSON object per line).",
+  "type": "object",
+  "required": ["t", "level", "service", "message"],
+  "additionalProperties": false,
+  "properties": {
+    "t": { "type": "string", "format": "date-time" },
+    "level": { "type": "string", "enum": ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"] },
+    "service": { "type": "string" },
+    "message": { "type": "string" }
+  }
+}

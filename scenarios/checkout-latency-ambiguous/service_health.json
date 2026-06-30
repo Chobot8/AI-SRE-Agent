@@ -1,0 +1,11 @@
+{
+  "service": "checkout-api",
+  "status": "degraded",
+  "version": "v1.9.1",
+  "replicas": { "desired": 5, "ready": 5 },
+  "dependencies": [
+    { "name": "orders-db", "type": "database", "status": "degraded", "latency_ms": 240, "error_rate": 0.0, "notes": "Query p95 up ~4x; could be an unindexed query - or could be shared-host contention." },
+    { "name": "inventory-api", "type": "internal_service", "status": "degraded", "latency_ms": 300, "error_rate": 0.0, "notes": "Call p95 up ~4x; could be the real bottleneck - or a victim of the same slow path." },
+    { "name": "cart-cache", "type": "cache", "status": "healthy", "latency_ms": 1, "error_rate": 0.0 }
+  ]
+}

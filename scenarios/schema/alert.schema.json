@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "scenarios/schema/alert.schema.json",
+  "title": "ScenarioAlert",
+  "description": "The inbound alert plus service metadata for a scenario pack (alert.json).",
+  "type": "object",
+  "required": ["id", "service", "environment", "source", "severity", "summary", "started_at"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "description": "Stable scenario incident id, e.g. SCN-001." },
+    "service": { "type": "string" },
+    "environment": { "type": "string", "enum": ["local", "staging", "production"] },
+    "source": { "type": "string", "description": "e.g. prometheus, alertmanager, grafana" },
+    "severity": { "type": "string", "enum": ["info", "warning", "critical"] },
+    "summary": { "type": "string" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "labels": { "type": "object", "additionalProperties": { "type": "string" } }
+  }
+}

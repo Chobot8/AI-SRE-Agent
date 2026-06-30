@@ -1,0 +1,5 @@
+{"t": "2026-06-25T14:28:11Z", "level": "INFO", "service": "payments-api", "message": "starting payments-api v2.4.0 (previous v2.3.7)"}
+{"t": "2026-06-25T14:30:22Z", "level": "ERROR", "service": "payments-api", "message": "NullPointerException in ChargeHandler.parseGatewayResponse: gateway 'reference' field missing"}
+{"t": "2026-06-25T14:30:48Z", "level": "ERROR", "service": "payments-api", "message": "NullPointerException in ChargeHandler.parseGatewayResponse: gateway 'reference' field missing"}
+{"t": "2026-06-25T14:31:05Z", "level": "ERROR", "service": "payments-api", "message": "500 Internal Server Error: unhandled exception processing /charge"}
+{"t": "2026-06-25T14:32:10Z", "level": "WARN", "service": "payments-api", "message": "circuit breaker to ledger-service half-open after elevated errors"}

@@ -1,0 +1,43 @@
+{
+  "metrics": [
+    {
+      "name": "checkout_api_p95_latency_ms",
+      "unit": "ms",
+      "description": "End-user p95 latency for checkout-api",
+      "points": [
+        { "t": "2026-06-25T10:50:00Z", "value": 520 },
+        { "t": "2026-06-25T10:58:00Z", "value": 910 },
+        { "t": "2026-06-25T11:05:00Z", "value": 1300 }
+      ]
+    },
+    {
+      "name": "orders_db_query_p95_ms",
+      "unit": "ms",
+      "description": "p95 of orders-db queries from checkout-api (elevated but not extreme)",
+      "points": [
+        { "t": "2026-06-25T10:50:00Z", "value": 60 },
+        { "t": "2026-06-25T10:58:00Z", "value": 180 },
+        { "t": "2026-06-25T11:05:00Z", "value": 240 }
+      ]
+    },
+    {
+      "name": "inventory_api_call_p95_ms",
+      "unit": "ms",
+      "description": "p95 of checkout-api's calls to inventory-api (also elevated)",
+      "points": [
+        { "t": "2026-06-25T10:50:00Z", "value": 70 },
+        { "t": "2026-06-25T10:58:00Z", "value": 210 },
+        { "t": "2026-06-25T11:05:00Z", "value": 300 }
+      ]
+    },
+    {
+      "name": "request_rate",
+      "unit": "req/s",
+      "description": "checkout-api request rate (flat - not a load problem)",
+      "points": [
+        { "t": "2026-06-25T10:50:00Z", "value": 210 },
+        { "t": "2026-06-25T11:05:00Z", "value": 216 }
+      ]
+    }
+  ]
+}

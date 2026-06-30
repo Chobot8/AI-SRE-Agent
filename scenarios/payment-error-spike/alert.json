@@ -1,0 +1,15 @@
+{
+  "id": "SCN-001",
+  "service": "payments-api",
+  "environment": "production",
+  "source": "alertmanager",
+  "severity": "critical",
+  "summary": "payments-api 5xx error rate 14% (threshold 2%) for 8m",
+  "started_at": "2026-06-25T14:31:00Z",
+  "labels": {
+    "service": "payments-api",
+    "alertname": "HighErrorRate",
+    "team": "payments",
+    "deployment": "payments-api-v2.4.0"
+  }
+}

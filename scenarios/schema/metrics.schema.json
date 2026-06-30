@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "scenarios/schema/metrics.schema.json",
+  "title": "ScenarioMetrics",
+  "description": "Mock time-series metrics for a scenario pack (metrics.json).",
+  "type": "object",
+  "required": ["metrics"],
+  "additionalProperties": false,
+  "properties": {
+    "metrics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "unit", "points"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "unit": { "type": "string" },
+          "description": { "type": "string" },
+          "points": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "string", "format": "date-time" },
+                "value": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

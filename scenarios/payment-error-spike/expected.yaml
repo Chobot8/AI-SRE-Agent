@@ -1,0 +1,32 @@
+id: SCN-001
+slug: payment-error-spike
+title: Payments API 5xx spike immediately after the v2.4.0 deploy
+domain: ecommerce
+agent_scenario: error_rate_spike
+is_ambiguous: false
+is_multi_cause: false
+is_false_positive: false
+root_cause:
+  summary: >-
+    A regression in deploy v2.4.0 (unhandled missing 'reference' field in the
+    gateway response) causes a 5xx spike beginning right after rollout. Rolling
+    back to v2.3.7 should restore the error rate.
+  category: bad_release
+  confidence: high
+expected_evidence:
+  - 5xx ratio jumps from 0.6% to 14% within minutes of the deploy marker at 14:28
+  - Repeating NullPointerException in ChargeHandler.parseGatewayResponse tied to new code
+  - Request rate is flat (~425 req/s), ruling out a traffic surge
+  - Downstream dependencies (orders-db, payments-gateway) report healthy
+expected_remediation:
+  direction: rollback
+  actions:
+    - Roll back payments-api to the previous known-good release v2.3.7
+    - Page the payments on-call owner for the critical error-rate breach
+    - Preserve the failing build and a sample stack trace for post-incident review
+  approval_required: true
+  production_impacting: true
+alternative_hypotheses: []
+missing_information: []
+runbook_references:
+  - error_rate_spike.md

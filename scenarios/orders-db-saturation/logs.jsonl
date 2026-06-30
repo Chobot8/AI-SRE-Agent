@@ -1,0 +1,5 @@
+{"t": "2026-06-25T19:44:30Z", "level": "INFO", "service": "orders-db", "message": "long-running transaction started by batch job 'nightly-reconcile' (pid 4471), holding locks on table orders"}
+{"t": "2026-06-25T19:46:12Z", "level": "WARN", "service": "orders-api", "message": "database connection pool exhausted: 100/100 in use, 37 requests queued"}
+{"t": "2026-06-25T19:47:05Z", "level": "ERROR", "service": "orders-api", "message": "query failed: lock wait timeout exceeded on UPDATE orders SET status=? WHERE id=?"}
+{"t": "2026-06-25T19:48:20Z", "level": "ERROR", "service": "orders-api", "message": "request /orders/checkout timed out after 2000ms waiting for a DB connection"}
+{"t": "2026-06-25T19:49:00Z", "level": "WARN", "service": "orders-db", "message": "pid 4471 still active for 270s, blocking 31 queries"}

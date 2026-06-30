@@ -1,0 +1,5 @@
+{"t": "2026-06-25T03:10:30Z", "level": "INFO", "service": "search-api", "message": "rolling restart completed for search-api-5b8c (routine nightly node rotation)"}
+{"t": "2026-06-25T03:11:02Z", "level": "WARN", "service": "search-api", "message": "major GC pause 610ms; query cache cold after restart"}
+{"t": "2026-06-25T03:11:40Z", "level": "INFO", "service": "search-api", "message": "query cache warming: hit ratio 41% and climbing"}
+{"t": "2026-06-25T03:13:05Z", "level": "INFO", "service": "search-api", "message": "p99 back under SLO (300ms); cache hit ratio 88%"}
+{"t": "2026-06-25T03:16:00Z", "level": "INFO", "service": "search-api", "message": "steady state restored; no operator action taken"}

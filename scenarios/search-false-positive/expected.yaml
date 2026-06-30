@@ -1,0 +1,36 @@
+id: SCN-006
+slug: search-false-positive
+title: search-api transient latency spike that recovers before any action
+domain: ecommerce
+agent_scenario: high_latency
+is_ambiguous: false
+is_multi_cause: false
+is_false_positive: true
+root_cause:
+  summary: >-
+    A routine nightly rolling restart caused a single major GC pause and a briefly
+    cold query cache, producing a one-minute p99 breach that recovered on its own.
+    This is a false-positive alert: by the time it is reviewed the service is back
+    under SLO. No remediation is warranted beyond tuning the alert.
+  category: false_positive_transient
+  confidence: high
+expected_evidence:
+  - p99 spikes to 850ms at 03:11 then recovers to ~300ms by 03:13 and 235ms by 03:16
+  - jvm_gc_pause_ms shows a single 610ms major GC aligned with the rolling restart
+  - cache_hit_ratio dips to 0.41 during cold start then warms back to 0.95
+  - service_health is healthy and all dependencies are healthy
+expected_remediation:
+  direction: no_action_monitor
+  actions:
+    - Take no remediation action - the symptom self-resolved before intervention
+    - Tune the alert to require a longer for-duration / multi-window condition to suppress single-sample spikes
+    - Optionally pre-warm the cache after routine restarts to avoid the cold-start blip
+  approval_required: false
+  production_impacting: false
+alternative_hypotheses:
+  - cause: Early sign of a real latency regression
+    why_plausible: A latency breach can be the first sample of a developing incident.
+    how_to_disambiguate: The metric already recovered under SLO and the cause maps to a routine restart/GC, so it is transient rather than sustained.
+missing_information: []
+runbook_references:
+  - high_latency.md

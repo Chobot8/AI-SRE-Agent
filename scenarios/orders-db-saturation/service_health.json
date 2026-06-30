@@ -1,0 +1,11 @@
+{
+  "service": "orders-api",
+  "status": "degraded",
+  "version": "v3.1.2",
+  "replicas": { "desired": 8, "ready": 8 },
+  "dependencies": [
+    { "name": "orders-db", "type": "database", "status": "degraded", "latency_ms": 2100, "error_rate": 0.08, "notes": "Connection pool at 100/100; lock waits from a long-running batch transaction (pid 4471)." },
+    { "name": "payments-gateway", "type": "external_api", "status": "healthy", "latency_ms": 182, "error_rate": 0.0 },
+    { "name": "inventory-api", "type": "internal_service", "status": "healthy", "latency_ms": 40, "error_rate": 0.0 }
+  ]
+}
