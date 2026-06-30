@@ -1,10 +1,4 @@
-"""Evaluation runner (KAN-19).
-
-Runs selected scenario packs (KAN-18) through the agent (KAN-5 diagnosis + KAN-6
-remediation), scores each with the deterministic checks, and aggregates the
-results into an :class:`EvaluationReport`. Runs entirely locally — deterministic
-analysis + in-process RAG, no external/production systems and no API keys.
-"""
+"""Evaluation runner (KAN-19)."""
 
 from __future__ import annotations
 
@@ -23,9 +17,6 @@ EVAL_VERSION = "KAN-19-eval-1"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-# --- result types ------------------------------------------------------------
-
-
 @dataclass
 class ScenarioResult:
     slug: str
@@ -37,8 +28,13 @@ class ScenarioResult:
     engine: str
     llm_calls: int
     retrieval_calls: int
+    predicted_top_cause: str = ""
+    top_confidence: float = 0.0
     checks: list[CheckResult] = field(default_factory=list)
     error: str | None = None
+
+    def check(self, name: str) -> CheckResult | None:
+        return next((c for c in self.checks if c.name == name), None)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -51,6 +47,8 @@ class ScenarioResult:
             "engine": self.engine,
             "llm_calls": self.llm_calls,
             "retrieval_calls": self.retrieval_calls,
+            "predicted_top_cause": self.predicted_top_cause,
+            "top_confidence": round(self.top_confidence, 3),
             "error": self.error,
             "checks": [c.to_dict() for c in self.checks],
         }
@@ -76,11 +74,11 @@ class EvaluationReport:
 
     @property
     def average_score(self) -> float:
-        return (
-            sum(r.quality_score for r in self.results) / self.total
-            if self.total
-            else 0.0
-        )
+        return sum(r.quality_score for r in self.results) / self.total if self.total else 0.0
+
+    @property
+    def avg_top_confidence(self) -> float:
+        return sum(r.top_confidence for r in self.results) / self.total if self.total else 0.0
 
     @property
     def total_duration_ms(self) -> int:
@@ -96,13 +94,11 @@ class EvaluationReport:
                 "failed": self.total - self.passed_count,
                 "pass_rate": round(self.pass_rate, 3),
                 "average_score": round(self.average_score, 3),
+                "avg_top_confidence": round(self.avg_top_confidence, 3),
                 "total_duration_ms": self.total_duration_ms,
             },
             "results": [r.to_dict() for r in self.results],
         }
-
-
-# --- metadata ----------------------------------------------------------------
 
 
 def _git_sha() -> str:
@@ -114,14 +110,12 @@ def _git_sha() -> str:
             text=True,
             timeout=5,
         )
-        sha = out.stdout.strip()
-        return sha or "unknown"
+        return out.stdout.strip() or "unknown"
     except Exception:
         return "unknown"
 
 
 def gather_metadata(scenario_count: int) -> dict[str, Any]:
-    """Run metadata: model/provider, prompt version, retrieval backend, commit."""
     return {
         "eval_version": EVAL_VERSION,
         "commit_sha": _git_sha(),
@@ -135,11 +129,7 @@ def gather_metadata(scenario_count: int) -> dict[str, Any]:
     }
 
 
-# --- running -----------------------------------------------------------------
-
-
 def run_scenario(slug: str) -> ScenarioResult:
-    """Run a single scenario pack through the agent and score it."""
     from backend.analysis import diagnose_incident
     from backend.remediation import recommend_for
 
@@ -147,10 +137,10 @@ def run_scenario(slug: str) -> ScenarioResult:
     incident = loader.to_normalized_incident(pack)
     expected = pack["expected"] or {}
 
-    diagnosis: dict[str, Any] | None = None
-    remediation: dict[str, Any] | None = None
+    diagnosis = None
+    remediation = None
     engine = "n/a"
-    error: str | None = None
+    error = None
 
     start = time.perf_counter()
     try:
@@ -159,11 +149,13 @@ def run_scenario(slug: str) -> ScenarioResult:
         diagnosis = diag_obj.to_dict()
         remediation = plan_obj.to_dict()
         engine = diag_obj.engine or "deterministic"
-    except Exception as exc:  # invalid output -> counted as a failure
+    except Exception as exc:
         error = f"{type(exc).__name__}: {exc}"
     duration_ms = int((time.perf_counter() - start) * 1000)
 
     score = score_scenario(diagnosis, remediation, expected, error)
+    hyps = (diagnosis or {}).get("hypotheses") or []
+    top = hyps[0] if hyps else {}
 
     return ScenarioResult(
         slug=slug,
@@ -175,13 +167,14 @@ def run_scenario(slug: str) -> ScenarioResult:
         engine=engine,
         llm_calls=1 if engine == "llm" else 0,
         retrieval_calls=1 if diagnosis is not None else 0,
+        predicted_top_cause=str(top.get("cause", "")),
+        top_confidence=float(top.get("confidence", 0.0) or 0.0),
         checks=score.checks,
         error=error,
     )
 
 
-def resolve_scenarios(selector: str | None) -> list[str]:
-    """Map a ``--scenario`` selector ("all" or comma-separated slugs) to slugs."""
+def resolve_scenarios(selector):
     if not selector or selector == "all":
         return loader.list_packs()
     requested = [s.strip() for s in selector.split(",") if s.strip()]
@@ -195,8 +188,7 @@ def resolve_scenarios(selector: str | None) -> list[str]:
     return requested
 
 
-def run_evaluation(slugs: list[str] | None = None) -> EvaluationReport:
-    """Run the evaluation over the given scenario slugs (default: all packs)."""
+def run_evaluation(slugs=None) -> EvaluationReport:
     slugs = slugs if slugs is not None else loader.list_packs()
     results = [run_scenario(s) for s in slugs]
     metadata = gather_metadata(len(results))

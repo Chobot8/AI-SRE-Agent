@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="250" viewBox="0 0 750 250" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="750" height="250" fill="#ffffff"/>
+<text x="16" y="26" font-size="16" font-weight="700" fill="#212121">AI SRE Agent — diagnosis quality</text>
+<text x="16" y="46" font-size="12" fill="#616161">Pass rate 2/6 (33%) · avg score 0.59 · commit 344fb78</text>
+<line x1="514.0" y1="58" x2="514.0" y2="220" stroke="#9e9e9e" stroke-dasharray="3,3" stroke-width="1"/>
+<text x="514.0" y="54" font-size="10" fill="#616161" text-anchor="middle">0.60 pass</text>
+<text x="230" y="81.0" font-size="12" fill="#212121" text-anchor="end">checkout-crashloop-badenv</text>
+<rect x="250" y="69" width="440" height="14" rx="3" fill="#eeeeee"/>
+<rect x="250" y="69" width="195.6" height="14" rx="3" fill="#c62828"/>
+<text x="698" y="81.0" font-size="11" fill="#616161">0.44</text>
+<text x="230" y="107.0" font-size="12" fill="#212121" text-anchor="end">checkout-latency-ambiguous</text>
+<rect x="250" y="95" width="440" height="14" rx="3" fill="#eeeeee"/>
+<rect x="250" y="95" width="205.3" height="14" rx="3" fill="#c62828"/>
+<text x="698" y="107.0" font-size="11" fill="#616161">0.47</text>
+<text x="230" y="133.0" font-size="12" fill="#212121" text-anchor="end">orders-db-saturation</text>
+<rect x="250" y="121" width="440" height="14" rx="3" fill="#eeeeee"/>
+<rect x="250" y="121" width="440.0" height="14" rx="3" fill="#2e7d32"/>
+<text x="698" y="133.0" font-size="11" fill="#616161">1.00</text>
+<text x="230" y="159.0" font-size="12" fill="#212121" text-anchor="end">payment-error-spike</text>
+<rect x="250" y="147" width="440" height="14" rx="3" fill="#eeeeee"/>
+<rect x="250" y="147" width="374.8" height="14" rx="3" fill="#2e7d32"/>
+<text x="698" y="159.0" font-size="11" fill="#616161">0.85</text>
+<text x="230" y="185.0" font-size="12" fill="#212121" text-anchor="end">payments-gateway-cascade</text>
+<rect x="250" y="173" width="440" height="14" rx="3" fill="#eeeeee"/>
+<rect x="250" y="173" width="154.0" height="14" rx="3" fill="#c62828"/>
+<text x="698" y="185.0" font-size="11" fill="#616161">0.35</text>
+<text x="230" y="211.0" font-size="12" fill="#212121" text-anchor="end">search-false-positive</text>
+<rect x="250" y="199" width="440" height="14" rx="3" fill="#eeeeee"/>
+<rect x="250" y="199" width="176.0" height="14" rx="3" fill="#c62828"/>
+<text x="698" y="211.0" font-size="11" fill="#616161">0.40</text>
+</svg>
