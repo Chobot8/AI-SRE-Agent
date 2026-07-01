@@ -41,6 +41,7 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeout
 from dataclasses import dataclass
 from enum import Enum
+import ssl
 from typing import TYPE_CHECKING, Callable, TypeVar
 
 if TYPE_CHECKING:
@@ -171,25 +172,48 @@ def call_with_timeout(
     Returns ``(value, None)`` on success or ``(None, ConnectorError)`` on
     failure.
     """
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(fn)
-        try:
-            return future.result(timeout=timeout_seconds), None
-        except FuturesTimeout:
-            future.cancel()
-            return None, ConnectorError(
-                connector=connector,
-                kind=ConnectorErrorKind.TIMEOUT,
-                message=f"timed out after {timeout_seconds}s",
-                retryable=True,
-            )
-        except Exception as exc:  # noqa: BLE001 - connectors must not raise
-            return None, ConnectorError(
-                connector=connector,
-                kind=ConnectorErrorKind.UNAVAILABLE,
-                message=str(exc),
-                retryable=True,
-            )
+    # A plain `with ThreadPoolExecutor(...) as pool:` block calls
+    # `pool.shutdown(wait=True)` on exit, which blocks until the worker thread
+    # finishes -- on a timeout that thread may still be stuck in the blocking
+    # call (e.g. a hung socket), so that would silently turn a "5s timeout"
+    # into "wait for however long the real call takes". Manage the pool
+    # manually and shut it down with wait=False so a timeout here returns
+    # promptly; the abandoned worker thread finishes or dies on its own.
+    pool = ThreadPoolExecutor(max_workers=1)
+    future = pool.submit(fn)
+    try:
+        return future.result(timeout=timeout_seconds), None
+    except FuturesTimeout:
+        return None, ConnectorError(
+            connector=connector,
+            kind=ConnectorErrorKind.TIMEOUT,
+            message=f"timed out after {timeout_seconds}s",
+            retryable=True,
+        )
+    except Exception as exc:  # noqa: BLE001 - connectors must not raise
+        return None, ConnectorError(
+            connector=connector,
+            kind=ConnectorErrorKind.UNAVAILABLE,
+            message=str(exc),
+            retryable=True,
+        )
+    finally:
+        pool.shutdown(wait=False)
+
+
+def ssl_context_for(config: ConnectorConfig) -> ssl.SSLContext:
+    """Build the SSL context a real connector should pass to ``urlopen``.
+
+    Respects ``config.verify_tls`` (default ``True``, i.e. normal certificate
+    verification). Only ever set ``verify_tls=False`` for a local/self-signed
+    test system -- e.g. ``KUBERNETES_VERIFY_TLS=false`` against a local
+    kind/minikube API server -- never for a real production endpoint.
+    """
+    context = ssl.create_default_context()
+    if not config.verify_tls:
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+    return context
 
 
 class MetricsConnector(ABC):

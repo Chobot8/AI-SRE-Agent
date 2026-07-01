@@ -28,6 +28,7 @@ from backend.connectors.base import (
     ConnectorErrorKind,
     RunbookConnector,
     call_with_timeout,
+    ssl_context_for,
 )
 from backend.connectors.scenario_source import (
     ScenarioFixture,
@@ -131,7 +132,10 @@ class RunbookDocsConnector(RunbookConnector):
             url = f"{self.config.base_url}/search?{params}"
             headers = _auth_headers(self.config)
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=self.config.timeout_seconds) as resp:
+            context = ssl_context_for(self.config)
+            with urllib.request.urlopen(
+                req, timeout=self.config.timeout_seconds, context=context
+            ) as resp:
                 payload = json.loads(resp.read())
             return _map_response(payload)
 

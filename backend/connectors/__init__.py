@@ -15,6 +15,7 @@ from backend.connectors.base import (
     RunbookConnector,
     TicketingConnector,
     call_with_timeout,
+    ssl_context_for,
 )
 from backend.connectors.jira import JiraTicketingConnector, MockTicketingConnector
 from backend.connectors.kubernetes import KubernetesApiConnector, MockKubernetesConnector
@@ -29,6 +30,7 @@ __all__ = [
     "ConnectorErrorKind",
     "ConnectorResult",
     "call_with_timeout",
+    "ssl_context_for",
     # Interfaces
     "KubernetesConnector",
     "LogsConnector",

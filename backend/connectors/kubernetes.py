@@ -21,6 +21,7 @@ from backend.connectors.base import (
     ConnectorErrorKind,
     KubernetesConnector,
     call_with_timeout,
+    ssl_context_for,
 )
 from backend.connectors.scenario_source import ScenarioFixture, find_scenario_slug_for_service
 from backend.connectors.schemas import (
@@ -158,7 +159,10 @@ class KubernetesApiConnector(KubernetesConnector):
             if self.config.api_token:
                 headers["Authorization"] = f"Bearer {self.config.api_token}"
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=self.config.timeout_seconds) as resp:
+            context = ssl_context_for(self.config)
+            with urllib.request.urlopen(
+                req, timeout=self.config.timeout_seconds, context=context
+            ) as resp:
                 payload = json.loads(resp.read())
             return _map_pod_list(payload, request.service)
 

@@ -9,6 +9,7 @@ configured.
 
 from __future__ import annotations
 
+import ssl
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -19,6 +20,7 @@ from backend.connectors.base import (
     ConnectorError,
     ConnectorErrorKind,
     call_with_timeout,
+    ssl_context_for,
 )
 from backend.connectors.jira import JiraTicketingConnector, MockTicketingConnector
 from backend.connectors.kubernetes import KubernetesApiConnector, MockKubernetesConnector
@@ -188,6 +190,48 @@ def test_real_jira_connector_reports_not_configured() -> None:
 def test_connector_config_configured_property() -> None:
     assert ConnectorConfig().configured is False
     assert ConnectorConfig(base_url="http://x").configured is True
+
+
+# --- call_with_timeout must actually return around the timeout budget ---------
+
+
+def test_call_with_timeout_returns_promptly_not_after_slow_call_finishes() -> None:
+    """Regression: a `with ThreadPoolExecutor(...)` block blocks on __exit__
+    (shutdown(wait=True)) until the worker thread finishes, which used to make
+    a 50ms timeout around a much slower call return only once the slow call
+    completed -- silently defeating the timeout contract."""
+
+    def _slow() -> int:
+        time.sleep(1.0)
+        return 1
+
+    started = time.monotonic()
+    value, error = call_with_timeout(_slow, timeout_seconds=0.05, connector="test")
+    elapsed = time.monotonic() - started
+
+    assert value is None
+    assert error.kind is ConnectorErrorKind.TIMEOUT
+    # generous upper bound vs. the 1s the slow call actually takes -- this
+    # call must return close to the requested 0.05s timeout, not ~1s later
+    assert elapsed < 0.5, f"call_with_timeout blocked for {elapsed:.2f}s past its timeout"
+
+
+# --- ssl_context_for must honor ConnectorConfig.verify_tls --------------------
+
+
+def test_ssl_context_for_default_verifies() -> None:
+    context = ssl_context_for(ConnectorConfig())
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    assert context.check_hostname is True
+
+
+def test_ssl_context_for_respects_verify_tls_false() -> None:
+    """Regression: KUBERNETES_VERIFY_TLS (and the general verify_tls config
+    field) was documented/exposed but never actually applied to the urlopen
+    call, so a self-signed local cluster would fail even with it set false."""
+    context = ssl_context_for(ConnectorConfig(verify_tls=False))
+    assert context.verify_mode == ssl.CERT_NONE
+    assert context.check_hostname is False
 
 
 def test_connector_error_diagnostic_note_format() -> None:

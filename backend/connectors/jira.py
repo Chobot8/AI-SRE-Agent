@@ -36,6 +36,7 @@ from backend.connectors.base import (
     ConnectorErrorKind,
     TicketingConnector,
     call_with_timeout,
+    ssl_context_for,
 )
 from backend.connectors.schemas import AddCommentRequest, CreateTicketRequest, TicketResult
 
@@ -155,7 +156,10 @@ class JiraTicketingConnector(TicketingConnector):
             ).encode()
             headers = {**self._auth_header(), "Content-Type": "application/json"}
             req = urllib.request.Request(url, data=body, headers=headers, method="POST")
-            with urllib.request.urlopen(req, timeout=self.config.timeout_seconds) as resp:
+            context = ssl_context_for(self.config)
+            with urllib.request.urlopen(
+                req, timeout=self.config.timeout_seconds, context=context
+            ) as resp:
                 payload = json.loads(resp.read())
             key = payload["key"]
             return TicketResult(
@@ -197,7 +201,10 @@ class JiraTicketingConnector(TicketingConnector):
             ).encode()
             headers = {**self._auth_header(), "Content-Type": "application/json"}
             req = urllib.request.Request(url, data=body, headers=headers, method="POST")
-            with urllib.request.urlopen(req, timeout=self.config.timeout_seconds):
+            context = ssl_context_for(self.config)
+            with urllib.request.urlopen(
+                req, timeout=self.config.timeout_seconds, context=context
+            ):
                 pass
             return TicketResult(
                 ticket_id=request.ticket_id,
