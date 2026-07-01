@@ -185,7 +185,13 @@ class DiagnosisService:
             return None  # best-effort: never break the live response
 
     def _retrieve_chunks(self, incident: dict) -> list[dict]:
-        """Best-effort RAG retrieval, mapped to retrieved_chunks rows."""
+        """Best-effort RAG retrieval, mapped to retrieved_chunks rows.
+
+        KAN-21: also carries each chunk's metadata (service, incident_type,
+        severity, environment, document_type) into the row's `chunk_metadata`
+        -> `metadata` jsonb column (already provisioned on `retrieved_chunks`,
+        see infra/db/schema.sql) -- no migration needed, purely additive.
+        """
         try:
             from backend.rag import Retriever, build_index, query_from_incident
 
@@ -200,6 +206,7 @@ class DiagnosisService:
                     "chunk_text": h.chunk.text,
                     "score": float(h.score),
                     "vector_store": "inproc:runbooks",
+                    "chunk_metadata": dict(h.chunk.metadata or {}),
                 }
                 for h in hits
             ]

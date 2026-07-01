@@ -1,15 +1,21 @@
-"""Retrieval + grounded-answer helper (KAN-4).
+"""Retrieval + grounded-answer helper (KAN-4, extended KAN-21).
 
 Retrieves the runbook chunks most relevant to an incident and formats answers
 that cite the operational context they draw on. The reasoning workflow (KAN-5)
-will use ``Retriever.retrieve`` and ``format_grounded_answer`` to ground its
-hypotheses and recommendations.
+uses ``Retriever.retrieve``/``retrieve_for_incident`` and
+``format_grounded_answer`` to ground its hypotheses and recommendations.
+
+KAN-21 adds optional metadata filtering (``filters=``) to both retrieval
+methods and a ``filters_from_incident`` helper to derive a sensible
+service/incident_type filter from a normalized incident -- both are opt-in
+(``filters=None`` is the default and preserves the exact KAN-4 behavior), so
+existing unfiltered callers are unaffected.
 """
 
 from __future__ import annotations
 
 from backend.rag.embeddings import Embedder, HashingEmbedder
-from backend.rag.models import RetrievedChunk
+from backend.rag.models import Citation, RetrievalFilters, RetrievedChunk
 from backend.rag.vector_store import VectorStore
 
 
@@ -31,6 +37,19 @@ def query_from_incident(incident: dict) -> str:
     return " ".join(parts)
 
 
+def filters_from_incident(incident: dict) -> RetrievalFilters:
+    """Derive a service/incident_type filter from a normalized incident (KAN-21).
+
+    Opt-in helper -- callers decide whether to pass this to ``retrieve``;
+    nothing applies it automatically, so default (unfiltered) retrieval is
+    unaffected.
+    """
+    return RetrievalFilters(
+        service=incident.get("service"),
+        incident_type=incident.get("scenario"),
+    )
+
+
 class Retriever:
     """Embeds a query and returns the top-k most similar runbook chunks."""
 
@@ -38,12 +57,21 @@ class Retriever:
         self.store = store
         self.embedder = embedder or HashingEmbedder(dim=store.dim)
 
-    def retrieve(self, query: str, k: int = 3) -> list[RetrievedChunk]:
+    def retrieve(
+        self, query: str, k: int = 3, filters: RetrievalFilters | None = None
+    ) -> list[RetrievedChunk]:
         query_vector = self.embedder.embed(query)
-        return self.store.search(query_vector, k=k)
+        return self.store.search(query_vector, k=k, filters=filters)
 
-    def retrieve_for_incident(self, incident: dict, k: int = 3) -> list[RetrievedChunk]:
-        return self.retrieve(query_from_incident(incident), k=k)
+    def retrieve_for_incident(
+        self, incident: dict, k: int = 3, filters: RetrievalFilters | None = None
+    ) -> list[RetrievedChunk]:
+        return self.retrieve(query_from_incident(incident), k=k, filters=filters)
+
+
+def citations_for(retrieved: list[RetrievedChunk]) -> list[Citation]:
+    """Map retrieved chunks onto structured :class:`Citation` objects (KAN-21)."""
+    return [r.structured_citation for r in retrieved]
 
 
 def format_grounded_answer(answer: str, retrieved: list[RetrievedChunk]) -> str:

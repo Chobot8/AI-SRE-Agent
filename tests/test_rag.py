@@ -1,16 +1,32 @@
-"""Tests for the runbook knowledge base + RAG (KAN-4)."""
+"""Tests for the runbook knowledge base + RAG (KAN-4, extended by KAN-21)."""
 
 import json
 from pathlib import Path
 
+import pytest
+
 from backend.rag import (
+    Chunk,
+    Citation,
+    ChromaRetrievalBackend,
+    DocumentMetadata,
+    FaissRetrievalBackend,
     HashingEmbedder,
+    KeywordVectorBackend,
+    PgVectorRetrievalBackend,
+    RetrievalBackend,
+    RetrievalFilters,
     Retriever,
     VectorStore,
     build_index,
+    citations_for,
     format_grounded_answer,
+    scenario_pack_documents,
 )
 from backend.rag.chunking import chunk_markdown
+from backend.scenarios.loader import list_packs, load_pack, to_normalized_incident
+
+SCENARIO_SLUGS = list_packs()
 
 
 def test_index_has_at_least_three_runbooks() -> None:
@@ -76,3 +92,162 @@ def test_index_rebuildable_and_deterministic(tmp_path: Path) -> None:
     # Deterministic embeddings: a query yields the same top source either way.
     q = HashingEmbedder().embed("oomkilled crashloopbackoff memory limit")
     assert reloaded.search(q, 1)[0].chunk.source == store2.search(q, 1)[0].chunk.source
+
+
+# --- KAN-21: metadata filtering, citations, swappable backends ---------------
+
+
+@pytest.mark.parametrize("slug", SCENARIO_SLUGS)
+def test_scenario_pack_top_hit_matches_incident_type(slug: str) -> None:
+    """Acceptance: retrieval precision on scenario packs -- for every pack (not
+    one hard-coded example), the top retrieved chunk's incident_type metadata
+    matches the pack's own expected scenario."""
+    pack = load_pack(slug)
+    incident = to_normalized_incident(pack)
+    store = build_index(include_scenario_packs=True)
+    retriever = Retriever(store)
+    hits = retriever.retrieve_for_incident(incident, k=3)
+    assert hits, slug
+    assert hits[0].chunk.metadata.get("incident_type") == incident["scenario"], slug
+    assert hits[0].score > 0, slug
+
+
+def test_incident_type_filter_excludes_other_scenario_types() -> None:
+    """Acceptance: retrieval supports metadata filters for incident type --
+    filtering removes cross-type intrusions present in unfiltered results."""
+    store = build_index(include_scenario_packs=True)
+    retriever = Retriever(store)
+    hits = retriever.retrieve(
+        "latency slow p99 dependency",
+        k=10,
+        filters=RetrievalFilters(incident_type="high_latency"),
+    )
+    assert hits
+    assert all(h.chunk.metadata.get("incident_type") == "high_latency" for h in hits)
+
+
+def test_service_filter_excludes_other_services() -> None:
+    """Acceptance: retrieval supports metadata filters for service -- results are
+    scoped to that service's own chunks plus generic (service=None) runbooks."""
+    store = build_index(include_scenario_packs=True)
+    retriever = Retriever(store)
+    hits = retriever.retrieve(
+        "checkout latency slow", k=20, filters=RetrievalFilters(service="checkout-api")
+    )
+    assert hits
+    assert all(h.chunk.metadata.get("service") in (None, "checkout-api") for h in hits)
+    assert any(h.chunk.metadata.get("service") == "checkout-api" for h in hits)
+
+
+def test_retrieval_filters_matches_wildcard_and_generic() -> None:
+    filters = RetrievalFilters(service="checkout-api")
+    assert filters.matches({"service": "checkout-api"})
+    assert filters.matches({})  # generic/untagged metadata matches any filter
+    assert not filters.matches({"service": "payments-api"})
+    assert RetrievalFilters().is_empty
+    assert not filters.is_empty
+
+
+def test_document_metadata_round_trip() -> None:
+    meta = DocumentMetadata(service="checkout-api", incident_type="high_latency", source="x.md")
+    data = meta.to_dict()
+    assert data["service"] == "checkout-api"
+    restored = DocumentMetadata.from_dict(data)
+    assert restored.service == "checkout-api"
+    assert restored.incident_type == "high_latency"
+
+
+def test_keyword_vector_backend_interface_contract() -> None:
+    """Demonstrates the swappable RetrievalBackend interface against synthetic
+    documents -- retrieval code does not directly depend on one hard-coded
+    scenario."""
+    backend: RetrievalBackend = KeywordVectorBackend()
+    docs = [
+        Chunk(
+            id="a1",
+            source="a.md",
+            heading="Intro",
+            text="rolling restart fixes memory leak",
+            metadata={"service": "widget-api", "incident_type": "memory_leak"},
+        ),
+        Chunk(
+            id="b1",
+            source="b.md",
+            heading="Intro",
+            text="scale replicas to handle traffic spike",
+            metadata={"service": "widget-api", "incident_type": "traffic_spike"},
+        ),
+    ]
+    backend.index_documents(docs)
+    hits = backend.search("memory leak restart", k=1)
+    assert hits[0].chunk.source == "a.md"
+
+    filtered = backend.search("fix", k=5, filters=RetrievalFilters(incident_type="traffic_spike"))
+    assert all(h.chunk.metadata.get("incident_type") == "traffic_spike" for h in filtered)
+
+
+def test_structured_citation_shape() -> None:
+    """Acceptance: agent responses include cited retrieved chunks/evidence."""
+    store = build_index()
+    retriever = Retriever(store)
+    hits = retriever.retrieve("connection pool exhausted lock contention", k=2)
+    citations = citations_for(hits)
+    assert citations
+    first = citations[0]
+    assert isinstance(first, Citation)
+    d = first.to_dict()
+    assert d["source"] == hits[0].chunk.source
+    assert d["score"] == hits[0].score
+    assert str(first).startswith(f"[{hits[0].chunk.source} >")
+
+
+@pytest.mark.parametrize(
+    "backend_cls", [ChromaRetrievalBackend, FaissRetrievalBackend, PgVectorRetrievalBackend]
+)
+def test_planned_backends_raise_not_implemented(backend_cls) -> None:
+    """Chroma/FAISS/pgvector backends are importable and constructible now, and
+    raise a clear, documented NotImplementedError until wired up -- keeping the
+    retrieval backend swappable without requiring the extra dependencies today."""
+    backend = backend_cls()
+    assert backend.name
+    with pytest.raises(NotImplementedError):
+        backend.index_documents([])
+    with pytest.raises(NotImplementedError):
+        backend.search("query")
+
+
+def test_scenario_pack_documents_honors_custom_scenarios_dir(tmp_path: Path) -> None:
+    """Regression: scenario_pack_documents(scenarios_dir=...) must actually read
+    from the given directory rather than silently falling back to the repo's
+    scenarios/ directory -- otherwise the parameter is misleading and a caller
+    can't point retrieval at an alternate/test fixture pack."""
+    pack_dir = tmp_path / "fixture-pack"
+    pack_dir.mkdir()
+    (pack_dir / "alert.json").write_text(
+        json.dumps({"service": "widget-api", "severity": "critical", "environment": "production"})
+    )
+    (pack_dir / "expected.yaml").write_text("agent_scenario: memory_leak\n")
+    (pack_dir / "runbook.md").write_text("# Fixture runbook\n\nRestart the pod.\n")
+
+    docs = scenario_pack_documents(tmp_path)
+    assert len(docs) == 1
+    assert docs[0].source == "fixture-pack"
+    assert docs[0].metadata["service"] == "widget-api"
+    assert docs[0].metadata["incident_type"] == "memory_leak"
+
+    # The real scenarios/ packs must not leak in when scoped to tmp_path.
+    assert not any(d.source in SCENARIO_SLUGS for d in docs)
+
+
+def test_build_index_scenarios_dir_scopes_indexed_packs(tmp_path: Path) -> None:
+    """build_index(include_scenario_packs=True, scenarios_dir=tmp_path) indexes
+    only the packs under tmp_path, not the repo's own scenario packs."""
+    pack_dir = tmp_path / "fixture-pack"
+    pack_dir.mkdir()
+    (pack_dir / "alert.json").write_text(json.dumps({"service": "widget-api"}))
+    (pack_dir / "expected.yaml").write_text("agent_scenario: memory_leak\n")
+    (pack_dir / "runbook.md").write_text("# Fixture runbook\n\nRestart the pod.\n")
+
+    store = build_index(include_scenario_packs=True, scenarios_dir=tmp_path)
+    assert "fixture-pack" in store.sources()
+    assert not any(slug in store.sources() for slug in SCENARIO_SLUGS)

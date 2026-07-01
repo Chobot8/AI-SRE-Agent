@@ -1,8 +1,9 @@
-"""In-memory vector store with JSON persistence (KAN-4).
+"""In-memory vector store with JSON persistence (KAN-4, extended KAN-21).
 
-Holds chunk vectors and metadata, supports top-k cosine search, and can be saved
-to / loaded from disk. The store is derived data: it is always rebuildable from
-the source runbooks via ``backend.rag.index.build_index``.
+Holds chunk vectors and metadata, supports top-k cosine search (optionally
+filtered on chunk metadata), and can be saved to / loaded from disk. The store
+is derived data: it is always rebuildable from the source runbooks via
+``backend.rag.index.build_index``.
 """
 
 from __future__ import annotations
@@ -10,8 +11,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from backend.rag.embeddings import cosine_similarity
-from backend.rag.models import Chunk, RetrievedChunk
+from backend.rag.embeddings import Embedder, cosine_similarity
+from backend.rag.models import Chunk, RetrievalFilters, RetrievedChunk
 
 
 class VectorStore:
@@ -32,10 +33,30 @@ class VectorStore:
         self._chunks.append(chunk)
         self._vectors.append(vector)
 
-    def search(self, query_vector: list[float], k: int = 3) -> list[RetrievedChunk]:
+    def index_documents(self, chunks: list[Chunk], embedder: Embedder) -> None:
+        """Embed and add every chunk (KAN-21 convenience matching the ticket's
+        suggested ``index_documents`` method name)."""
+        for chunk in chunks:
+            self.add(chunk, embedder.embed(chunk.text))
+
+    def search(
+        self,
+        query_vector: list[float],
+        k: int = 3,
+        filters: RetrievalFilters | None = None,
+    ) -> list[RetrievedChunk]:
+        """Top-k cosine search, optionally restricted to chunks whose metadata
+        satisfies ``filters`` (KAN-21). ``filters=None`` (the default) searches
+        the whole store, unchanged from the original KAN-4 behavior.
+        """
+        pairs = zip(self._chunks, self._vectors)
+        if filters is not None and not filters.is_empty:
+            pairs = (
+                (chunk, vec) for chunk, vec in pairs if filters.matches(chunk.metadata)
+            )
         scored = [
             RetrievedChunk(chunk=chunk, score=cosine_similarity(query_vector, vec))
-            for chunk, vec in zip(self._chunks, self._vectors)
+            for chunk, vec in pairs
         ]
         scored.sort(key=lambda r: r.score, reverse=True)
         return scored[:k]

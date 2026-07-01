@@ -1,4 +1,4 @@
-"""Analysis output models (KAN-5).
+"""Analysis output models (KAN-5, extended KAN-21).
 
 Stdlib dataclasses so the reasoning engine runs with no external dependencies and
 its output is trivially machine-readable (``to_dict`` / ``to_json``) and
@@ -53,6 +53,13 @@ class IncidentDiagnosis:
     symptoms: list[str] = field(default_factory=list)
     hypotheses: list[Hypothesis] = field(default_factory=list)
     references: list[str] = field(default_factory=list)
+    # KAN-21: structured citation data alongside the plain-string `references`
+    # above (kept unchanged for backward compatibility) -- each item is a
+    # `backend.rag.models.Citation.to_dict()` (source, heading, document_type,
+    # service, incident_type, severity, environment, score, text_snippet), so
+    # a UI/API consumer can show *which* runbook/evidence source was used
+    # without re-parsing the "[source > heading]" string.
+    citations: list[dict] = field(default_factory=list)
     engine: str = "deterministic"           # "deterministic" | "llm"
     error: str | None = None
 
@@ -66,6 +73,7 @@ class IncidentDiagnosis:
             "symptoms": list(self.symptoms),
             "hypotheses": [h.to_dict() for h in self.hypotheses],
             "references": list(self.references),
+            "citations": [dict(c) for c in self.citations],
             "engine": self.engine,
             "error": self.error,
         }
