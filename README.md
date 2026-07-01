@@ -77,6 +77,7 @@ flowchart LR
 | API | `backend/api/` (FastAPI diagnosis endpoints) | KAN-7 |
 | UI | `ui/app.py` (Streamlit incident triage) | KAN-8 |
 | Observability | `backend/observability/` (correlation IDs, logs, metrics) | KAN-12 |
+| SRE tool connectors | `backend/connectors/` (Prometheus/Loki/Kubernetes/Jira/runbook connector contracts, mocked by default) | KAN-22 |
 
 A full-resolution diagram is committed at [`docs/architecture.svg`](docs/architecture.svg).
 
@@ -409,7 +410,8 @@ AI-SRE-Agent/
 │   ├── remediation/       # KAN-6 — guardrailed remediation advisor + policy
 │   ├── api/               # KAN-7 — routes, schemas, service orchestration
 │   ├── observability/     # KAN-12 — correlation IDs, JSON logs, metrics
-│   └── db/                # KAN-16 — session, ORM models, repositories, seed
+│   ├── db/                # KAN-16 — session, ORM models, repositories, seed
+│   └── connectors/        # KAN-22 — Prometheus/Loki/Kubernetes/Jira/runbook connectors (mocked)
 ├── ui/app.py              # KAN-8 — Streamlit incident-triage UI
 ├── knowledge/runbooks/    # KAN-4 — source runbooks (one per scenario)
 ├── sample-data/           # 5 incident scenarios + JSON schema + eval baseline
@@ -473,6 +475,7 @@ Built as a vertical-slice backlog (Jira project `KAN`), KAN-2 → KAN-13:
 | KAN-11 | CI pipeline | ✅ |
 | KAN-12 | Agent observability (logs, metrics, tracing) | ✅ |
 | KAN-13 | Portfolio README, architecture diagram, demo script | ✅ |
+| KAN-22 | SRE tool connector interfaces (Prometheus/Loki/Kubernetes/Jira/runbook, mocked) | ✅ |
 
 ### Scope & safety notes
 
