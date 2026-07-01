@@ -18,7 +18,9 @@ retrieval-quality tests (which assert an exact top-hit source) are unaffected.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any
 
 from backend.rag.chunking import chunk_file, chunk_markdown
 from backend.rag.embeddings import Embedder, HashingEmbedder
@@ -63,26 +65,75 @@ def _runbook_documents(runbooks_dir: Path) -> list[Chunk]:
     return chunks
 
 
+def _pack_slugs_under(scenarios_dir: Path) -> list[str]:
+    """Slugs of every *complete* pack (has ``expected.yaml``) under
+    ``scenarios_dir``, mirroring ``backend.scenarios.loader.list_packs`` but
+    parameterized by directory so a custom/test ``scenarios_dir`` is honored."""
+    if not scenarios_dir.exists():
+        return []
+    return sorted(
+        p.name
+        for p in scenarios_dir.iterdir()
+        if p.is_dir() and p.name != "schema" and (p / "expected.yaml").exists()
+    )
+
+
+def _load_pack_under(scenarios_dir: Path, slug: str) -> dict[str, Any]:
+    """Load one pack's ``alert``/``expected``/``runbook`` directly from
+    ``scenarios_dir/slug`` -- independent of ``backend.scenarios.loader``'s
+    module-level (repo-root) ``SCENARIOS_DIR``, so a custom ``scenarios_dir``
+    (e.g. a test fixture directory) is actually read from, not silently
+    ignored in favor of the default ``scenarios/`` directory."""
+    import yaml
+
+    d = scenarios_dir / slug
+    alert = json.loads((d / "alert.json").read_text(encoding="utf-8"))
+    expected_path = d / "expected.yaml"
+    expected = yaml.safe_load(expected_path.read_text(encoding="utf-8")) or {}
+    runbook_path = d / "runbook.md"
+    runbook = runbook_path.read_text(encoding="utf-8") if runbook_path.exists() else ""
+    return {"alert": alert, "expected": expected, "runbook": runbook}
+
+
 def scenario_pack_documents(scenarios_dir: Path | None = None) -> list[Chunk]:
     """Chunk each scenario pack's ``runbook.md`` snippet (KAN-18), tagged with
     that pack's service/incident_type/severity/environment (KAN-21).
 
-    Every pack under ``scenarios_dir`` is discovered generically via
-    ``backend.scenarios.loader`` -- nothing here names a specific scenario.
-    Returns ``[]`` (rather than raising) if the scenarios package or its
-    optional dependencies (PyYAML, jsonschema) aren't available, since
-    scenario-pack indexing is an addition on top of the core knowledge base,
-    not a hard requirement for retrieval to work.
+    When ``scenarios_dir`` is ``None`` (the ``build_index()`` default), packs
+    are discovered via ``backend.scenarios.loader`` against the repo's
+    ``scenarios/`` directory -- unchanged from the original behavior. When
+    ``scenarios_dir`` is given explicitly, packs are discovered and loaded
+    directly from *that* directory instead, so the parameter is honored
+    (rather than always reading the repo default) and callers/tests can point
+    this at an alternate fixture directory. Either way, every pack found is
+    discovered generically -- nothing here names a specific scenario. Returns
+    ``[]`` (rather than raising) if the scenarios package or its optional
+    dependencies (PyYAML, jsonschema) aren't available, since scenario-pack
+    indexing is an addition on top of the core knowledge base, not a hard
+    requirement for retrieval to work.
     """
-    try:
-        from backend.scenarios.loader import list_packs, load_pack
-    except Exception:  # pragma: no cover - defensive, optional dependency
-        return []
+    if scenarios_dir is None:
+        try:
+            from backend.scenarios.loader import list_packs, load_pack
+        except Exception:  # pragma: no cover - defensive, optional dependency
+            return []
+        slugs = list_packs()
+
+        def _load(slug: str) -> dict[str, Any]:
+            return load_pack(slug)
+    else:
+        try:
+            slugs = _pack_slugs_under(scenarios_dir)
+        except Exception:  # pragma: no cover - defensive, unreadable directory
+            return []
+
+        def _load(slug: str) -> dict[str, Any]:
+            return _load_pack_under(scenarios_dir, slug)
 
     chunks: list[Chunk] = []
-    for slug in list_packs():
+    for slug in slugs:
         try:
-            pack = load_pack(slug)
+            pack = _load(slug)
         except Exception:  # pragma: no cover - a malformed pack shouldn't break indexing
             continue
         alert = pack.get("alert") or {}

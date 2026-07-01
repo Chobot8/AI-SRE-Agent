@@ -32,7 +32,7 @@ def chunk_markdown(
 ) -> list[Chunk]:
     """Chunk Markdown ``text`` from ``source`` into heading-scoped pieces.
 
-    ``metadata`` (KAN-21), when given, is attached to every chunk produced —
+    ``metadata`` (KAN-21), when given, is attached to every chunk produced --
     e.g. ``{"document_type": "runbook", "incident_type": "high_latency"}``.
     """
     chunks: list[Chunk] = []
@@ -53,7 +53,13 @@ def chunk_markdown(
             piece = " ".join(words[start : start + max_words])
             chunk_id = f"{source}::{_slug(heading)}::{seq}"
             chunks.append(
-                Chunk(id=chunk_id, source=source, heading=heading, text=piece, metadata=dict(meta))
+                Chunk(
+                    id=chunk_id,
+                    source=source,
+                    heading=heading,
+                    text=piece,
+                    metadata=dict(meta),
+                )
             )
             seq += 1
 
@@ -68,6 +74,11 @@ def chunk_markdown(
     return chunks
 
 
-def chunk_file(path: Path, max_words: int = 120, metadata: dict | None = None) -> list[Chunk]:
+def chunk_file(
+    path: Path,
+    max_words: int = 120,
+    metadata: dict | None = None,
+) -> list[Chunk]:
     """Chunk a Markdown file on disk."""
-    return chunk_markdown(path.read_text(encoding="utf-8"), path.name, max_words, metadata=metadata)
+    text = path.read_text(encoding="utf-8")
+    return chunk_markdown(text, path.name, max_words, metadata=metadata)

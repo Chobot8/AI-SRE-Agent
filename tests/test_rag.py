@@ -21,6 +21,7 @@ from backend.rag import (
     build_index,
     citations_for,
     format_grounded_answer,
+    scenario_pack_documents,
 )
 from backend.rag.chunking import chunk_markdown
 from backend.scenarios.loader import list_packs, load_pack, to_normalized_incident
@@ -213,3 +214,40 @@ def test_planned_backends_raise_not_implemented(backend_cls) -> None:
         backend.index_documents([])
     with pytest.raises(NotImplementedError):
         backend.search("query")
+
+
+def test_scenario_pack_documents_honors_custom_scenarios_dir(tmp_path: Path) -> None:
+    """Regression: scenario_pack_documents(scenarios_dir=...) must actually read
+    from the given directory rather than silently falling back to the repo's
+    scenarios/ directory -- otherwise the parameter is misleading and a caller
+    can't point retrieval at an alternate/test fixture pack."""
+    pack_dir = tmp_path / "fixture-pack"
+    pack_dir.mkdir()
+    (pack_dir / "alert.json").write_text(
+        json.dumps({"service": "widget-api", "severity": "critical", "environment": "production"})
+    )
+    (pack_dir / "expected.yaml").write_text("agent_scenario: memory_leak\n")
+    (pack_dir / "runbook.md").write_text("# Fixture runbook\n\nRestart the pod.\n")
+
+    docs = scenario_pack_documents(tmp_path)
+    assert len(docs) == 1
+    assert docs[0].source == "fixture-pack"
+    assert docs[0].metadata["service"] == "widget-api"
+    assert docs[0].metadata["incident_type"] == "memory_leak"
+
+    # The real scenarios/ packs must not leak in when scoped to tmp_path.
+    assert not any(d.source in SCENARIO_SLUGS for d in docs)
+
+
+def test_build_index_scenarios_dir_scopes_indexed_packs(tmp_path: Path) -> None:
+    """build_index(include_scenario_packs=True, scenarios_dir=tmp_path) indexes
+    only the packs under tmp_path, not the repo's own scenario packs."""
+    pack_dir = tmp_path / "fixture-pack"
+    pack_dir.mkdir()
+    (pack_dir / "alert.json").write_text(json.dumps({"service": "widget-api"}))
+    (pack_dir / "expected.yaml").write_text("agent_scenario: memory_leak\n")
+    (pack_dir / "runbook.md").write_text("# Fixture runbook\n\nRestart the pod.\n")
+
+    store = build_index(include_scenario_packs=True, scenarios_dir=tmp_path)
+    assert "fixture-pack" in store.sources()
+    assert not any(slug in store.sources() for slug in SCENARIO_SLUGS)
