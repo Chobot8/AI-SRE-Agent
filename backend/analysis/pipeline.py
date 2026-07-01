@@ -8,6 +8,12 @@ Turns a normalized incident into a structured, ranked diagnosis:
 Deterministic by default; an optional LLMClient can propose hypotheses, with
 deterministic fallback when its output is incomplete. Always returns a valid
 IncidentDiagnosis — failure cases carry a diagnostic error, never an empty result.
+
+KAN-21: retrieval context is fetched once per diagnosis and mapped onto both
+the plain-string ``references`` (unchanged, KAN-4 shape) and the structured
+``citations`` (KAN-21) fields of ``IncidentDiagnosis`` -- retrieval itself
+still runs unfiltered by default, so existing evaluation baselines (which
+assert an exact top-hit runbook) are unaffected.
 """
 
 from __future__ import annotations
@@ -47,8 +53,11 @@ class IncidentAnalyzer:
         self._retriever = retriever
         self._llm = llm
 
-    # --- context: runbook references -------------------------------------
-    def _references(self, incident: dict) -> list[str]:
+    # --- context: runbook references + citations (KAN-21) -----------------
+    def _retrieve(self, incident: dict) -> list:
+        """Best-effort retrieval; returns [] on any failure or if RAG is
+        unavailable. Shared by ``references``/``citations`` so both reflect
+        the exact same retrieval call."""
         if not _RAG_AVAILABLE:
             return []
         try:
@@ -57,7 +66,7 @@ class IncidentAnalyzer:
             METRICS.retrievals_total.inc()
             METRICS.retrieved_chunks_total.inc(len(hits))
             log_event(_log, "retrieval.completed", chunks=len(hits))
-            return [h.citation for h in hits]
+            return hits
         except Exception:  # pragma: no cover - references are best-effort
             return []
 
@@ -161,6 +170,7 @@ class IncidentAnalyzer:
             f"Leading hypothesis: {top.cause} ({top.confidence_label} confidence)."
         ).strip()
 
+        hits = self._retrieve(incident)
         return IncidentDiagnosis(
             incident_id=str(incident["id"]),
             service=str(incident.get("service", "unknown")),
@@ -169,7 +179,8 @@ class IncidentAnalyzer:
             summary=summary,
             symptoms=symptoms,
             hypotheses=hypotheses,
-            references=self._references(incident),
+            references=[h.citation for h in hits],
+            citations=[h.structured_citation.to_dict() for h in hits],
             engine=engine,
         )
 

@@ -71,7 +71,7 @@ flowchart LR
 | Layer | Module | Ticket |
 | ----- | ------ | ------ |
 | Telemetry ingestion | `backend/telemetry/` (mock Prometheus/Grafana/Loki/alert connectors → `NormalizedIncident`) | KAN-3 |
-| RAG knowledge | `backend/rag/` (chunk → embed → in-process JSON vector store → retriever) | KAN-4 |
+| RAG knowledge | `backend/rag/` (chunk → embed → swappable `RetrievalBackend` → metadata filters + citations) | KAN-4 / KAN-21 |
 | Reasoning | `backend/analysis/` (signal detectors, ranked hypotheses, deterministic + optional LLM) | KAN-5 |
 | Remediation | `backend/remediation/` (guardrailed actions, risk/rollback, approval-required) | KAN-6 |
 | API | `backend/api/` (FastAPI diagnosis endpoints) | KAN-7 |
@@ -182,9 +182,12 @@ curl -s -X POST http://localhost:8000/incidents/replay/db_saturation | jq
 1. **Telemetry ingestion (KAN-3).** Mock connectors normalize a raw incident
    (metrics, logs, alert) into a single `NormalizedIncident`. Real
    Prometheus/Grafana/Loki/Alertmanager connectors are stubbed for later.
-2. **RAG retrieval (KAN-4).** Runbooks are chunked, embedded, and stored in a
-   small in-process vector store; the retriever returns the top-k chunks most
-   relevant to the incident so hypotheses are grounded in operational knowledge.
+2. **RAG retrieval (KAN-4, extended by KAN-21).** Runbooks are chunked with
+   metadata (service, incident type, severity, environment, document type,
+   source) and stored behind a swappable `RetrievalBackend`; the retriever
+   returns the top-k chunks most relevant to the incident — optionally narrowed
+   by metadata filters — each with a structured citation, so hypotheses are
+   grounded in operational knowledge and traceable to their source.
 3. **Reasoning (KAN-5).** Signal detectors map metrics/logs to symptom tokens,
    which score a knowledge base of candidate causes into a **ranked, confidence-
    scored** hypothesis list. Deterministic by default; an optional `LLMClient`
@@ -405,7 +408,7 @@ AI-SRE-Agent/
 │   ├── main.py            # FastAPI app: startup, observability middleware, /metrics
 │   ├── config.py          # env-driven settings (pydantic-settings)
 │   ├── telemetry/         # KAN-3 — ingestion + mock connectors → NormalizedIncident
-│   ├── rag/               # KAN-4 — chunk · embed · vector store · retriever
+│   ├── rag/               # KAN-4/21 — chunk · embed · swappable retrieval backend · citations
 │   ├── analysis/          # KAN-5 — detectors, knowledge base, reasoning pipeline
 │   ├── remediation/       # KAN-6 — guardrailed remediation advisor + policy
 │   ├── api/               # KAN-7 — routes, schemas, service orchestration
@@ -476,6 +479,7 @@ Built as a vertical-slice backlog (Jira project `KAN`), KAN-2 → KAN-13:
 | KAN-12 | Agent observability (logs, metrics, tracing) | ✅ |
 | KAN-13 | Portfolio README, architecture diagram, demo script | ✅ |
 | KAN-22 | SRE tool connector interfaces (Prometheus/Loki/Kubernetes/Jira/runbook, mocked) | ✅ |
+| KAN-21 | Retrieval backend upgrade: metadata filters, citations, swappable backend | ✅ |
 
 ### Scope & safety notes
 
